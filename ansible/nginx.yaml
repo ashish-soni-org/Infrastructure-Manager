@@ -1,6 +1,12 @@
 - name: Install and start Nginx on Ubuntu
   hosts: all
+  gather_facts: false
   become: true
+
+  vars:
+    ansible_connection: aws_ssm
+    ansible_aws_ssm_region: ap-south-1
+    ansible_user: ubuntu
 
   tasks:
     - name: Update apt cache

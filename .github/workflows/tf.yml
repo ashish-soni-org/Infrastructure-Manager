@@ -62,14 +62,26 @@ jobs:
         with:
           python-version: "3.11"
 
-      - name: Install Ansible
+      - name: Install Ansible + AWS deps
         run: |
-          aws ssm start-session --target "${{ needs.terraform.outputs.instance_id }},"
-          pip install ansible
+          pip install ansible boto3 botocore
 
-      - name: Run Ansible Playbook 
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_DEFAULT_REGION }}
+
+      - name: Run Ansible via SSM
         working-directory: ansible
         run: |
           ansible-playbook \
             -i "${{ needs.terraform.outputs.instance_id }}," \
             nginx.yaml
+            
+        #     - name: Run Ansible Playbook 
+        # working-directory: ansible
+        # run: |
+        #   ansible-playbook \
+        #     -i "${{ needs.terraform.outputs.instance_id }}," \
+        #     nginx.yaml
