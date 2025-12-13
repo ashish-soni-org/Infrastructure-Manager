@@ -11,15 +11,15 @@
 #   })
 # }
 
-resource "aws_iam_instance_profile" "ec2_profile" {
-  name = "Production-Server-SSM-Profile"
-  role = data.aws_iam_role.ec2_ssm_role.name
-}
+# resource "aws_iam_instance_profile" "ec2_profile" {
+#   name = "Production-Server-SSM-Profile"
+#   role = data.aws_iam_role.ec2_ssm_role.name
+# }
 
-resource "aws_iam_role_policy_attachment" "ssm" {
-  role      = data.aws_iam_role.ec2_ssm_role.name
-  policy_arn = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
-}
+# resource "aws_iam_role_policy_attachment" "ssm" {
+#   role      = data.aws_iam_role.ec2_ssm_role.name
+#   policy_arn = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
+# }
 
 # Production with SSM role
 resource "aws_instance" "Production_server" {
