@@ -15,7 +15,7 @@ jobs:
         working-directory: terraform
 
     outputs:
-      public_ip: ${{ steps.tf_outputs.outputs.instance_id }}
+      instance_id: ${{ steps.tf_outputs.outputs.instance_id }}
 
     steps:
       - name: Checkout repo
@@ -46,7 +46,7 @@ jobs:
       - name: Export Terraform outputs
         id: tf_outputs
         run: |
-          echo "public_ip=$(terraform output -raw public_IP)" >> $GITHUB_OUTPUT
+          echo "instance_id=$(terraform output -raw instance_id)" >> $GITHUB_OUTPUT
 
   ansible:
     name: Ansible
