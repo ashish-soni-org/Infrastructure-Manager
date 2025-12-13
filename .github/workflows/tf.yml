@@ -64,6 +64,7 @@ jobs:
 
       - name: Install Ansible
         run: |
+          aws ssm start-session --target "${{ needs.terraform.outputs.instance_id }},"
           pip install ansible
 
       - name: Run Ansible Playbook 
