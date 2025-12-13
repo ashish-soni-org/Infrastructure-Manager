@@ -15,7 +15,7 @@ jobs:
         working-directory: terraform
 
     outputs:
-      public_ip: ${{ steps.tf_outputs.outputs.public_ip }}
+      public_ip: ${{ steps.tf_outputs.outputs.instance_id }}
 
     steps:
       - name: Checkout repo
