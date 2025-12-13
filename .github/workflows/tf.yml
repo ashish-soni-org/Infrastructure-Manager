@@ -70,4 +70,4 @@ jobs:
         run: |
           ansible-playbook \
             -i "${{ needs.terraform.outputs.instance_id }}," \
-            ../ansible/nginx.yml
+            ../ansible/nginx.yaml
