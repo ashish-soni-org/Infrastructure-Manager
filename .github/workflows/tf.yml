@@ -67,7 +67,8 @@ jobs:
           pip install ansible
 
       - name: Run Ansible Playbook
+        working-directory: ansible
         run: |
           ansible-playbook \
             -i "${{ needs.terraform.outputs.instance_id }}," \
-            ../ansible/nginx.yaml
+            nginx.yaml
