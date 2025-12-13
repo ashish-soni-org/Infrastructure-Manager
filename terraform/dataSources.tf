@@ -12,3 +12,6 @@ data "aws_security_group" "Production_Security_Group" {
     ENV = "PROD"
   }
 }
+data "aws_iam_role" "ec2_ssm_role" {
+  name = "Production-Server-SSM-Role"
+}
