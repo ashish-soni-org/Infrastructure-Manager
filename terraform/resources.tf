@@ -26,7 +26,7 @@ resource "aws_instance" "Production_server" {
   ami = var.ami
   instance_type = var.instance_type
 
-  iam_instance_profile = aws_iam_instance_profile.ec2_profile.name
+  iam_instance_profile = data.aws_iam_instance_profile.ec2_profile.name
   security_groups = [ data.aws_security_group.Production_Security_Group.id ]
 
   subnet_id = data.aws_subnet.Production_Subnet.id
