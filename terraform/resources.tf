@@ -1,26 +1,3 @@
-# resource "aws_iam_role" "ec2_ssm_role" {
-#   name = "Production-Server-SSM-Role"
-
-#   assume_role_policy = jsonencode({
-#     Version = "2012-10-17"
-#     Statement = [{
-#       Effect    = "Allow"
-#       Principal = { Service = "ec2.amazonaws.com" }
-#       Action    = "sts:AssumeRole"
-#     }]
-#   })
-# }
-
-# resource "aws_iam_instance_profile" "ec2_profile" {
-#   name = "Production-Server-SSM-Profile"
-#   role = data.aws_iam_role.ec2_ssm_role.name
-# }
-
-# resource "aws_iam_role_policy_attachment" "ssm" {
-#   role      = data.aws_iam_role.ec2_ssm_role.name
-#   policy_arn = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
-# }
-
 # Production with SSM role
 resource "aws_instance" "Production_server" {
   ami = var.ami
@@ -36,20 +13,13 @@ resource "aws_instance" "Production_server" {
   }
 }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+resource "local_file" "ansible_inventory" {
+  filename = "${path.module}/../ansible/inventory.ini"
+  content  = <<EOF
+    [prod]
+    ${aws_instance.Production_server.public_ip} ansible_user=ubuntu
+  EOF
+}
 
 
 # resource "aws_eip" "Production_elastic_ip" {

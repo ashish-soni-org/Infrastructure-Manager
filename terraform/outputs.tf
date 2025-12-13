@@ -1,6 +1,6 @@
-# output "public_IP" {
-#   value = aws_instance.Production_server.public_ip
-# }
+output "public_IP" {
+  value = aws_instance.Production_server.public_ip
+}
 
 # output "region" {
 #   value = aws_instance.Production_server.region
