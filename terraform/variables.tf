@@ -31,3 +31,10 @@ variable "ami" {
   default = "ami-02b8269d5e85954ef"
   
 }
+
+variable "connection_type" {
+  description = ""
+  type = string
+  default = "aws_ssm"
+  
+}

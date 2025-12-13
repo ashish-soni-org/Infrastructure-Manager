@@ -13,13 +13,13 @@ resource "aws_instance" "Production_server" {
   }
 }
 
-resource "local_file" "ansible_inventory" {
-  filename = "${path.module}/../ansible/inventory.ini"
-  content  = <<EOF
-    [prod]
-    ${aws_instance.Production_server.public_ip} ansible_user=ubuntu
-  EOF
-}
+# resource "local_file" "ansible_inventory" {
+#   filename = "../ansible/inventory.ini"
+#   content  = <<EOF
+#     [prod]
+#     ${aws_instance.Production_server.id} ansible_connection=${var.connection_type} ansible_aws_ssm_region=${var.region}
+#   EOF
+# }
 
 
 # resource "aws_eip" "Production_elastic_ip" {
