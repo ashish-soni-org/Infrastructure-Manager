@@ -1,0 +1,36 @@
+# - name: Install Docker on Ubuntu
+#   hosts: all
+#   become: true
+
+#   tasks:
+#     - name: Install required packages
+#       apt:
+#         name:
+#           - apt-transport-https
+#           - ca-certificates
+#           - curl
+#           - software-properties-common
+#         state: present
+#         update_cache: true
+
+#     - name: Add Docker’s official GPG key
+#       apt_key:
+#         url: https://download.docker.com/linux/ubuntu/gpg
+#         state: present
+
+#     - name: Add Docker repository
+#       apt_repository:
+#         repo: deb https://download.docker.com/linux/ubuntu focal stable
+#         state: present
+
+#     - name: Install Docker
+#       apt:
+#         name: docker-ce
+#         state: latest
+#         update_cache: true
+
+#     - name: Add ubuntu user to docker group
+#       user:
+#         name: ubuntu
+#         groups: docker
+#         append: yes
