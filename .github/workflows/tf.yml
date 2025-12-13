@@ -33,7 +33,7 @@ jobs:
         working-directory: ansible
         run: |
           ansible-playbook \
-            -i i-05ced86c7709f979e \
+            -i "i-05ced86c7709f979e" \
             nginx.yaml
 
 
