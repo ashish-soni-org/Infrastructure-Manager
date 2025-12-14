@@ -28,7 +28,7 @@
     # ----------------------------------------
     # Task 0: CRITICAL FIX for Permission Denied
     # ----------------------------------------
-    - name: FORCE FIX: Set correct permissions on /home/ubuntu directory
+    - name: Set correct permissions on /home/ubuntu directory
       become: true # Needs root privilege to modify /home/ubuntu
       ansible.builtin.file:
         path: "/home/ubuntu"
