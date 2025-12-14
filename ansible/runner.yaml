@@ -101,10 +101,13 @@
       ansible.builtin.set_fact:
         runner_token: "{{ github_token_response.json.token }}"
 
+    - name: Show runner name
+      ansible.builtin.debug:
+        msg: "Configuring runner for {{ inventory_hostname }}"
+
     - name: Configure the runner
       become: false # CORRECT: Runs as 'ubuntu'
       ansible.builtin.command: |
-        echo "{{ inventory_hostname }}"
         ./config.sh \
           --url "https://github.com/ashish-soni-org" \
           --token {{ runner_token }} \
