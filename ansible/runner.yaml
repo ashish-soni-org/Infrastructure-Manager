@@ -14,7 +14,6 @@
 - name: Install and start runner on instance
   hosts: all
   gather_facts: false
-  become: true
   # Set the remote user explicitly for the SSM connection plugin.
   # Change 'ubuntu' if your AMI uses a different default user (e.g., 'ec2-user').
   remote_user: ubuntu 
