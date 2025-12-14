@@ -14,9 +14,7 @@
 - name: Install and start runner on instance
   hosts: all
   gather_facts: false
-  become: true
-  # Set the remote user explicitly for the SSM connection plugin.
-  # Change 'ubuntu' if your AMI uses a different default user (e.g., 'ec2-user').
+  become: true # Keep global 'become: true' for the service tasks later
   remote_user: ubuntu 
 
   vars:
@@ -28,17 +26,18 @@
 
   tasks:
     # ----------------------------------------
-    # Task 1 & 2: Connectivity Check (Optional, for debugging)
+    # Task 1 & 2: Connectivity Check
     # ----------------------------------------
     - name: Test connectivity before download
       ansible.builtin.shell: curl -I https://github.com/
       register: curl_check
+      become: false # Run as ubuntu user
     - name: Print curl check result
       ansible.builtin.debug:
         var: curl_check.stdout_lines
 
     # ----------------------------------------
-    # Task 3: Install Dependencies
+    # Task 3: Install Dependencies (Requires root)
     # ----------------------------------------
     - name: Install dependencies for runner
       ansible.builtin.apt:
@@ -55,12 +54,14 @@
         state: directory
         owner: "{{ ansible_user }}"
         mode: '0755'
+      become: false # <<< FIX: Run as 'ubuntu' to avoid ownership issues
 
     - name: Download the latest runner package
       ansible.builtin.get_url:
         url: https://github.com/actions/runner/releases/download/v2.316.0/actions-runner-linux-x64-2.316.0.tar.gz # Check for latest version
         dest: "{{ runner_base_path }}/actions-runner-linux-x64.tar.gz"
         owner: "{{ ansible_user }}"
+      become: false # <<< FIX: Run as 'ubuntu'
 
     - name: Extract the runner package
       ansible.builtin.unarchive:
@@ -68,31 +69,24 @@
         dest: "{{ runner_base_path }}"
         owner: "{{ ansible_user }}"
         remote_src: yes
+      become: false # <<< FIX: Run as 'ubuntu'
 
     # ----------------------------------------
-    # Task 6 & 7: Get Token and Configure (UPDATED FOR ORGANIZATION)
+    # Task 6 & 7: Get Token and Configure
     # ----------------------------------------
     - name: Get GitHub Organization Runner Registration Token
       ansible.builtin.uri:
-        # **CRITICAL CHANGE HERE**
-        # We replace the REPO endpoint with the ORG endpoint. 
-        # REPO_URL is still passed, but we only use the organization part.
-        url: "{{ REPO_URL | regex_replace('https://github.com/([^/]+)/.*', 'https://api.github.com/orgs/\\1') }}/actions/runners/registration-token"
-        method: POST
-        headers:
-          Authorization: "Bearer {{ GITHUB_TOKEN }}"
-          Accept: "application/vnd.github+json"
-          X-GitHub-Api-Version: "2022-11-28"
-        status_code: 201
-        return_content: yes
+        # ... (URI content) ...
+        X-GitHub-Api-Version: "2022-11-28"
       register: github_token_response
+      become: false # Added for safety, though URI is less affected by 'chdir' issues
 
     - name: Extract registration token
       ansible.builtin.set_fact:
         runner_token: "{{ github_token_response.json.token }}"
 
     - name: Configure the runner
-      become: false # CORRECT: Runs as 'ubuntu' to avoid "Must not run with sudo"
+      become: false # CORRECT: Runs as 'ubuntu'
       ansible.builtin.command: |
         ./config.sh \
           --url {{ REPO_URL }} \
@@ -119,3 +113,217 @@
         name: actions.runner.{{ inventory_hostname }}.service
         enabled: yes
         state: started
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# # runner.yaml
+
+# # Wait for SSM Agent to be available on the Instance
+# - name: Wait for connection to be available
+#   hosts: all
+#   vars:
+#     ansible_connection: aws_ssm
+#     ansible_aws_ssm_bucket_name: ansible-ssm-artifacts-ashish-123
+#     ansible_aws_ssm_region: ap-south-1
+#   tasks:
+#     - name: Wait for connection
+#       wait_for_connection:
+
+# - name: Install and start runner on instance
+#   hosts: all
+#   gather_facts: false
+#   become: true
+#   # Set the remote user explicitly for the SSM connection plugin.
+#   # Change 'ubuntu' if your AMI uses a different default user (e.g., 'ec2-user').
+#   remote_user: ubuntu 
+
+#   vars:
+#     ansible_connection: aws_ssm
+#     ansible_aws_ssm_bucket_name: ansible-ssm-artifacts-ashish-123
+#     ansible_aws_ssm_region: ap-south-1
+#     # Define a variable for the runner base path using the dynamic ansible_user
+#     runner_base_path: "/home/{{ ansible_user }}/actions-runner"
+
+#   tasks:
+#     # ----------------------------------------
+#     # Task 1 & 2: Connectivity Check (Optional, for debugging)
+#     # ----------------------------------------
+#     - name: Test connectivity before download
+#       ansible.builtin.shell: curl -I https://github.com/
+#       register: curl_check
+#     - name: Print curl check result
+#       ansible.builtin.debug:
+#         var: curl_check.stdout_lines
+
+#     # ----------------------------------------
+#     # Task 3: Install Dependencies
+#     # ----------------------------------------
+#     - name: Install dependencies for runner
+#       ansible.builtin.apt:
+#         name: ['curl', 'jq', 'git']
+#         state: present
+#       when: ansible_os_family == "Debian"
+
+#     # ----------------------------------------
+#     # Task 4 & 5: Setup Runner Files
+#     # ----------------------------------------
+#     - name: Create runner directory
+#       ansible.builtin.file:
+#         path: "{{ runner_base_path }}"
+#         state: directory
+#         owner: "{{ ansible_user }}"
+#         mode: '0755'
+
+#     - name: Download the latest runner package
+#       ansible.builtin.get_url:
+#         url: https://github.com/actions/runner/releases/download/v2.316.0/actions-runner-linux-x64-2.316.0.tar.gz # Check for latest version
+#         dest: "{{ runner_base_path }}/actions-runner-linux-x64.tar.gz"
+#         owner: "{{ ansible_user }}"
+
+#     - name: Extract the runner package
+#       ansible.builtin.unarchive:
+#         src: "{{ runner_base_path }}/actions-runner-linux-x64.tar.gz"
+#         dest: "{{ runner_base_path }}"
+#         owner: "{{ ansible_user }}"
+#         remote_src: yes
+
+#     # ----------------------------------------
+#     # Task 6 & 7: Get Token and Configure (UPDATED FOR ORGANIZATION)
+#     # ----------------------------------------
+#     - name: Get GitHub Organization Runner Registration Token
+#       ansible.builtin.uri:
+#         # **CRITICAL CHANGE HERE**
+#         # We replace the REPO endpoint with the ORG endpoint. 
+#         # REPO_URL is still passed, but we only use the organization part.
+#         url: "{{ REPO_URL | regex_replace('https://github.com/([^/]+)/.*', 'https://api.github.com/orgs/\\1') }}/actions/runners/registration-token"
+#         method: POST
+#         headers:
+#           Authorization: "Bearer {{ GITHUB_TOKEN }}"
+#           Accept: "application/vnd.github+json"
+#           X-GitHub-Api-Version: "2022-11-28"
+#         status_code: 201
+#         return_content: yes
+#       register: github_token_response
+
+#     - name: Extract registration token
+#       ansible.builtin.set_fact:
+#         runner_token: "{{ github_token_response.json.token }}"
+
+#     - name: Configure the runner
+#       become: false # CORRECT: Runs as 'ubuntu' to avoid "Must not run with sudo"
+#       ansible.builtin.command: |
+#         ./config.sh \
+#           --url {{ REPO_URL }} \
+#           --token {{ runner_token }} \
+#           --name {{ inventory_hostname }} \
+#           --labels linux,x64,aws,ec2
+#       args:
+#         chdir: "{{ runner_base_path }}"
+
+#     # ----------------------------------------
+#     # Task 8 & 9: Install and Start Service
+#     # ----------------------------------------
+#     - name: Install and start the runner service
+#       become: yes
+#       ansible.builtin.command: |
+#         ./svc.sh install
+#       args:
+#         chdir: "{{ runner_base_path }}"
+
+#     - name: Enable and start runner service
+#       become: yes
+#       ansible.builtin.systemd:
+#         # Service name is dynamic based on instance ID (inventory_hostname)
+#         name: actions.runner.{{ inventory_hostname }}.service
+#         enabled: yes
+#         state: started
