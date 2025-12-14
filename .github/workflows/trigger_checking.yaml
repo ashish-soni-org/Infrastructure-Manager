@@ -30,7 +30,5 @@ jobs:
           curl -X POST \
             -H "Authorization: Bearer ${{ steps.app-token.outputs.token }}" \
             -H "Accept: application/vnd.github+json" \
-            # --- FIX APPLIED HERE ---
             https://api.github.com/repos/ashish-soni-org/Full-Project/dispatches \
-            # ------------------------
             -d '{"event_type":"on-demand-test","client_payload":{"from":"repo-a"}}'
