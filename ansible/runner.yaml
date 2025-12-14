@@ -122,9 +122,9 @@
           --url "https://github.com/ashish-soni-org" \
           --token {{ runner_token }} \
           --runnergroup "Production_Runners"
-          --something
-          --work "work"
-          --labels linux,x64,aws,ec2
+          something
+          linux,x64,aws,ec2
+          work_dir
         EOF
       args:
         chdir: "{{ runner_base_path }}"
