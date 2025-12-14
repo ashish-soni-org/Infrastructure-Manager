@@ -64,7 +64,7 @@
         path: "{{ runner_base_path }}"
         state: directory
         owner: "{{ ansible_user }}"
-        mode: '0755'
+        mode: '777'
 
     - name: Download the latest runner package
       ansible.builtin.get_url:
@@ -104,6 +104,7 @@
     - name: Configure the runner
       become: false # CORRECT: Runs as 'ubuntu'
       ansible.builtin.command: |
+        echo "{{ inventory_hostname }}"
         ./config.sh \
           --url "https://github.com/ashish-soni-org" \
           --token {{ runner_token }} \
