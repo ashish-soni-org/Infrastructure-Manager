@@ -101,11 +101,6 @@
       ansible.builtin.set_fact:
         runner_token: "{{ github_token_response.json.token }}"
 
-    - name: Run pwd to check working directory
-      become: false
-      ansible.builtin.command: pwd
-      register: pwd_check # <-- Register the result here
-
     - name: Configure the runner
       become: false # CORRECT: Runs as 'ubuntu'
       ansible.builtin.command: |
@@ -115,6 +110,7 @@
           --name {{ inventory_hostname }} \
           --labels linux,x64,aws,ec2
       args:
+        owner: "{{ ansible_user }}"
         chdir: "{{ runner_base_path }}"
 
     # ----------------------------------------
