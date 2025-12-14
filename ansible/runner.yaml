@@ -82,6 +82,7 @@
         headers:
           Authorization: "Bearer {{ GITHUB_TOKEN }}"
           Accept: "application/vnd.github+json"
+          X-GitHub-Api-Version: "2022-11-28"
         status_code: 201
         return_content: yes
       register: github_token_response
