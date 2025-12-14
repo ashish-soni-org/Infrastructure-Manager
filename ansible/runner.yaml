@@ -89,14 +89,10 @@
       ansible.builtin.set_fact:
         runner_token: "{{ github_token_response.json.token }}"
 
-    - name: DEBUG 1: Run pwd to check working directory
+    - name: Run pwd to check working directory
       become: false
       ansible.builtin.command: pwd
       register: pwd_check # <-- Register the result here
-
-    - name: DEBUG 2: Print the working directory output
-      ansible.builtin.debug:
-        var: pwd_check.stdout_lines # <-- Print the stdout
 
     - name: Configure the runner
       become: false # CORRECT: Runs as 'ubuntu'
