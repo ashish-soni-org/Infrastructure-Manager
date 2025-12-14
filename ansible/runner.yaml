@@ -31,7 +31,6 @@
     - name: Test connectivity before download
       ansible.builtin.shell: curl -I https://github.com/
       register: curl_check
-      become: false # Run as ubuntu user
     - name: Print curl check result
       ansible.builtin.debug:
         var: curl_check.stdout_lines
@@ -73,10 +72,18 @@
     # ----------------------------------------
     - name: Get GitHub Organization Runner Registration Token
       ansible.builtin.uri:
-        # ... (URI content) ...
-        X-GitHub-Api-Version: "2022-11-28"
+        # **CRITICAL CHANGE HERE**
+        # We replace the REPO endpoint with the ORG endpoint. 
+        # REPO_URL is still passed, but we only use the organization part.
+        url: "{{ REPO_URL | regex_replace('https://github.com/([^/]+)/.*', 'https://api.github.com/orgs/\\1') }}/actions/runners/registration-token"
+        method: POST
+        headers:
+          Authorization: "Bearer {{ GITHUB_TOKEN }}"
+          Accept: "application/vnd.github+json"
+          X-GitHub-Api-Version: "2022-11-28"
+        status_code: 201
+        return_content: yes
       register: github_token_response
-      become: false # Added for safety, though URI is less affected by 'chdir' issues
 
     - name: Extract registration token
       ansible.builtin.set_fact:
