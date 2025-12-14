@@ -39,27 +39,27 @@
           - lsb-release
         state: present
 
-    # 1. Ensure the keyrings directory exists
-    - name: Ensure /etc/apt/keyrings directory exists
+    - name: Ensure /etc/apt/keyrings directory exists and is secured
       ansible.builtin.file:
         path: /etc/apt/keyrings
         state: directory
         mode: '0755'
-    
-    # 2. Download Docker's official GPG key and place it in the new location
-    - name: Download Docker GPG key
-      ansible.builtin.get_url:
-        url: https://download.docker.com/linux/ubuntu/gpg
-        dest: /etc/apt/keyrings/docker.gpg
-        mode: '0644'
-    
-    # 3. Add Docker stable repository using 'signed-by'
-    - name: Add Docker stable repository
+
+    - name: Download and prepare Docker's GPG key using curl/gpg
+      ansible.builtin.shell:
+        cmd: |
+          curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+          chmod a+r /etc/apt/keyrings/docker.gpg
+        creates: /etc/apt/keyrings/docker.gpg # Prevents rerunning if file exists
+      args:
+        warn: false
+
+    - name: Add Docker stable repository with explicit signed-by path
       ansible.builtin.apt_repository:
         repo: "deb [arch={{ ansible_architecture }} signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu {{ ansible_distribution_release }} stable"
         state: present
         filename: docker
-        update_cache: yes # Ensure cache update runs successfully here
+        update_cache: yes # Force apt update here
 
     - name: Add Docker GPG key
       ansible.builtin.apt_key:
