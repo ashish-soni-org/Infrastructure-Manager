@@ -23,6 +23,13 @@
     ansible_aws_ssm_region: ap-south-1
 
   tasks:
+    - name: Test connectivity before download
+      ansible.builtin.shell: curl -I https://github.com/
+      register: curl_check
+    - name: Print curl check result
+      ansible.builtin.debug:
+        var: curl_check.stdout_lines
+
     # Add these to your initial setup tasks if they aren't already there
     - name: Install dependencies for runner
       ansible.builtin.apt:
