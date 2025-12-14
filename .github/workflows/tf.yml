@@ -113,6 +113,13 @@ jobs:
             -e "GITHUB_TOKEN=${{ steps.app_token.outputs.token }}" \
             -e "REPO_URL=$REPO_URL_DYNAMIC"
 
+      # - name: Run Dcoker via SSM
+      #   working-directory: ansible
+      #   run: |
+      #     ansible-playbook \
+      #       -i "i-08b9e620406344f1d," \
+            # docker.yaml
+
 
 
 

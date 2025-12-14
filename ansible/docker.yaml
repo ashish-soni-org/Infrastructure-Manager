@@ -1,36 +1,26 @@
-# - name: Install Docker on Ubuntu
-#   hosts: all
-#   become: true
 
-#   tasks:
-#     - name: Install required packages
-#       apt:
-#         name:
-#           - apt-transport-https
-#           - ca-certificates
-#           - curl
-#           - software-properties-common
-#         state: present
-#         update_cache: true
+# Wait for SSM Agent to be available on the Instance
+- name: Wait for connection to be available
+  hosts: all
+  vars:
+    ansible_connection: aws_ssm
+    ansible_aws_ssm_bucket_name: ansible-ssm-artifacts-ashish-123
+    ansible_aws_ssm_region: ap-south-1
+    # When the S3 bucket isn't in the same region as the Instance
+    # Explicitly setting the addressing style to 'virtual' may be necessary
+    # https://repost.aws/knowledge-center/s3-http-307-response
+  tasks:
+    - name: Wait for connection
+      wait_for_connection:
 
-#     - name: Add Docker’s official GPG key
-#       apt_key:
-#         url: https://download.docker.com/linux/ubuntu/gpg
-#         state: present
+- name: Install and start Docker on Ubuntu
+  hosts: all
+  gather_facts: false
+  become: true
 
-#     - name: Add Docker repository
-#       apt_repository:
-#         repo: deb https://download.docker.com/linux/ubuntu focal stable
-#         state: present
+  vars:
+    ansible_connection: aws_ssm
+    ansible_aws_ssm_bucket_name: ansible-ssm-artifacts-ashish-123
+    ansible_aws_ssm_region: ap-south-1
 
-#     - name: Install Docker
-#       apt:
-#         name: docker-ce
-#         state: latest
-#         update_cache: true
-
-#     - name: Add ubuntu user to docker group
-#       user:
-#         name: ubuntu
-#         groups: docker
-#         append: yes
+  

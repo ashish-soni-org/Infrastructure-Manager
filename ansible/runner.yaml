@@ -119,10 +119,11 @@
     - name: Enable and start runner service
       become: yes
       ansible.builtin.systemd:
-        # Service name is dynamic based on instance ID (inventory_hostname)
         name: actions.runner.ashish-soni-org.self-hosted-runner-{{ inventory_hostname }}.service
         enabled: yes
         state: started
+      ansible.builtin.command: |
+        ./run.sh
 
 
 
