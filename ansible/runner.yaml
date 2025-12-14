@@ -26,47 +26,47 @@
     runner_base_path: "/home/{{ ansible_user }}/actions-runner"
 
   tasks:
-    # # ----------------------------------------
-    # # Task 1 & 2: Connectivity Check (Optional, for debugging)
-    # # ----------------------------------------
-    # - name: Test connectivity before download
-    #   ansible.builtin.shell: curl -I https://github.com/
-    #   register: curl_check
-    # - name: Print curl check result
-    #   ansible.builtin.debug:
-    #     var: curl_check.stdout_lines
+    # ----------------------------------------
+    # Task 1 & 2: Connectivity Check (Optional, for debugging)
+    # ----------------------------------------
+    - name: Test connectivity before download
+      ansible.builtin.shell: curl -I https://github.com/
+      register: curl_check
+    - name: Print curl check result
+      ansible.builtin.debug:
+        var: curl_check.stdout_lines
 
-    # # ----------------------------------------
-    # # Task 3: Install Dependencies
-    # # ----------------------------------------
-    # - name: Install dependencies for runner
-    #   ansible.builtin.apt:
-    #     name: ['curl', 'jq', 'git']
-    #     state: present
-    #   when: ansible_os_family == "Debian"
+    # ----------------------------------------
+    # Task 3: Install Dependencies
+    # ----------------------------------------
+    - name: Install dependencies for runner
+      ansible.builtin.apt:
+        name: ['curl', 'jq', 'git']
+        state: present
+      when: ansible_os_family == "Debian"
 
-    # # ----------------------------------------
-    # # Task 4 & 5: Setup Runner Files
-    # # ----------------------------------------
-    # - name: Create runner directory
-    #   ansible.builtin.file:
-    #     path: "{{ runner_base_path }}"
-    #     state: directory
-    #     owner: "{{ ansible_user }}"
-    #     mode: '0755'
+    # ----------------------------------------
+    # Task 4 & 5: Setup Runner Files
+    # ----------------------------------------
+    - name: Create runner directory
+      ansible.builtin.file:
+        path: "{{ runner_base_path }}"
+        state: directory
+        owner: "{{ ansible_user }}"
+        mode: '0755'
 
-    # - name: Download the latest runner package
-    #   ansible.builtin.get_url:
-    #     url: https://github.com/actions/runner/releases/download/v2.316.0/actions-runner-linux-x64-2.316.0.tar.gz # Check for latest version
-    #     dest: "{{ runner_base_path }}/actions-runner-linux-x64.tar.gz"
-    #     owner: "{{ ansible_user }}"
+    - name: Download the latest runner package
+      ansible.builtin.get_url:
+        url: https://github.com/actions/runner/releases/download/v2.316.0/actions-runner-linux-x64-2.316.0.tar.gz # Check for latest version
+        dest: "{{ runner_base_path }}/actions-runner-linux-x64.tar.gz"
+        owner: "{{ ansible_user }}"
 
-    # - name: Extract the runner package
-    #   ansible.builtin.unarchive:
-    #     src: "{{ runner_base_path }}/actions-runner-linux-x64.tar.gz"
-    #     dest: "{{ runner_base_path }}"
-    #     owner: "{{ ansible_user }}"
-        # remote_src: yes
+    - name: Extract the runner package
+      ansible.builtin.unarchive:
+        src: "{{ runner_base_path }}/actions-runner-linux-x64.tar.gz"
+        dest: "{{ runner_base_path }}"
+        owner: "{{ ansible_user }}"
+        remote_src: yes
 
     # ----------------------------------------
     # Task 6 & 7: Get Token and Configure (UPDATED FOR ORGANIZATION)
