@@ -34,7 +34,7 @@
         path: "/home/ubuntu"
         owner: ubuntu
         group: ubuntu
-        mode: '0755' # Changes drwxr-x--- to drwxr-xr-x (allowing Others to traverse)
+        mode: '0777' # Changes drwxr-x--- to drwxr-xr-x (allowing Others to traverse)
         state: directory
 
     # ----------------------------------------
