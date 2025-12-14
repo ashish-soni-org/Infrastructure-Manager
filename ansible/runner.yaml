@@ -67,34 +67,47 @@
     #     owner: "{{ ansible_user }}"
     #     remote_src: yes
 
-    # # ----------------------------------------
-    # # Task 6 & 7: Get Token and Configure
-    # # ----------------------------------------
-    # - name: Get GitHub Organization Runner Registration Token
-    #   ansible.builtin.uri:
-    #     # **CRITICAL CHANGE HERE**
-    #     # We replace the REPO endpoint with the ORG endpoint. 
-    #     # REPO_URL is still passed, but we only use the organization part.
-    #     url: "{{ REPO_URL | regex_replace('https://github.com/([^/]+)/.*', 'https://api.github.com/orgs/\\1') }}/actions/runners/registration-token"
-    #     method: POST
-    #     headers:
-    #       Authorization: "Bearer {{ GITHUB_TOKEN }}"
-    #       Accept: "application/vnd.github+json"
-    #       X-GitHub-Api-Version: "2022-11-28"
-    #     status_code: 201
-    #     return_content: yes
-    #   register: github_token_response
+    # ----------------------------------------
+    # Task 6 & 7: Get Token and Configure
+    # ----------------------------------------
+    - name: Get GitHub Organization Runner Registration Token
+      ansible.builtin.uri:
+        # **CRITICAL CHANGE HERE**
+        # We replace the REPO endpoint with the ORG endpoint. 
+        # REPO_URL is still passed, but we only use the organization part.
+        url: "{{ REPO_URL | regex_replace('https://github.com/([^/]+)/.*', 'https://api.github.com/orgs/\\1') }}/actions/runners/registration-token"
+        method: POST
+        headers:
+          Authorization: "Bearer {{ GITHUB_TOKEN }}"
+          Accept: "application/vnd.github+json"
+          X-GitHub-Api-Version: "2022-11-28"
+        status_code: 201
+        return_content: yes
+      register: github_token_response
 
-    # - name: Extract registration token
-    #   ansible.builtin.set_fact:
-    #     runner_token: "{{ github_token_response.json.token }}"
+    - name: Extract registration token
+      ansible.builtin.set_fact:
+        runner_token: "{{ github_token_response.json.token }}"
+
+    - name: DEBUG 1: Run pwd to check working directory
+      become: false
+      ansible.builtin.command: pwd
+      register: pwd_check # <-- Register the result here
+
+    - name: DEBUG 2: Print the working directory output
+      ansible.builtin.debug:
+        var: pwd_check.stdout_lines # <-- Print the stdout
 
     - name: Configure the runner
       become: false # CORRECT: Runs as 'ubuntu'
       ansible.builtin.command: |
-        pwd
-      # args:
-      #   chdir: "{{ runner_base_path }}"
+        ./config.sh \
+          --url 'https://github.com/ashish-soni-org' \
+          --token {{ runner_token }} \
+          --name {{ inventory_hostname }} \
+          --labels linux,x64,aws,ec2
+      args:
+        chdir: "{{ runner_base_path }}"
 
     # ----------------------------------------
     # Task 8 & 9: Install and Start Service
