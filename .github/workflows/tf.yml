@@ -99,7 +99,7 @@ jobs:
         working-directory: ansible
         run: |
           # 1. Get the dynamic Instance ID from the preceding 'terraform' job output
-          INSTANCE_ID="i-0f7bb204d2e23069c,"
+          INSTANCE_ID="${{ needs.terraform.outputs.instance_id }},,"
           
           # 2. Construct the dynamic REPO_URL
           REPO_URL_DYNAMIC="${{ github.server_url }}/${{ github.repository }}"
