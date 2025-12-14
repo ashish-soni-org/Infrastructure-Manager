@@ -80,8 +80,8 @@
         url: "{{ REPO_URL | regex_replace('https://github.com/([^/]+)/.*', 'https://api.github.com/orgs/\\1') }}/actions/runners/registration-token"
         method: POST
         headers:
-          Authorization: "token {{ GITHUB_TOKEN }}"
-          Accept: "application/vnd.github.v3+json"
+          Authorization: "Bearer {{ GITHUB_TOKEN }}"
+          Accept: "application/vnd.github+json"
         status_code: 201
         return_content: yes
       register: github_token_response
