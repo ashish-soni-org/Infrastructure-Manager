@@ -1,0 +1,27 @@
+name: Trigger Repo B via GitHub App
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  trigger:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Generate GitHub App token
+        id: app-token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ secrets.GH_APP_ID }}
+          private-key: ${{ secrets.GH_APP_PRIVATE_KEY }}
+          owner: ashish-soni-org
+          repositories: Full-Project
+
+      - name: Trigger Repo B
+        run: |
+          curl -X POST \
+            -H "Accept: application/vnd.github+json" \
+            -H "Authorization: Bearer ${{ steps.app-token.outputs.token }}" \
+            https://api.github.com/repos/ashish-soni-org/Full-Project/dispatches \
+            -d '{"event_type":"from-repo-a"}'
