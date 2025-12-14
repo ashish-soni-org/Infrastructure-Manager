@@ -115,33 +115,32 @@
 
     - name: Configure the runner
       become: true # Use root/ssm-user to execute sudo
-      ansible.builtin.command: |
-        sudo -u ubuntu /bin/bash 
-
-    - name: Check execution environment
-      become: false
-      ansible.builtin.shell: | # <-- CHANGE MODULE NAME TO SHELL
-        echo "HELLO!!"
-        pwd
-        whoami
-      register: env_check
-
-    - name: Print environment details
-      ansible.builtin.debug:
-        var: env_check.stdout_lines
-    
-    - name: Configure the runner
-      become: true # CORRECT: Runs as 'ubuntu'
-      ansible.builtin.command: |
+      ansible.builtin.shell: |
+        sudo -u ubuntu /bin/bash << EOF
+        cd "{{ runner_base_path }}"
         ./config.sh \
           --url "https://github.com/ashish-soni-org" \
           --token {{ runner_token }} \
-          --runnergroup "asd"
-          --work "sad"
+          --runnergroup "Production_Runners"
+          --work "_work"
           --name "something" \
           --labels linux,x64,aws,ec2
+        EOF
       args:
         chdir: "{{ runner_base_path }}"
+    
+    # - name: Configure the runner
+    #   become: true # CORRECT: Runs as 'ubuntu'
+    #   ansible.builtin.command: |
+    #     ./config.sh \
+    #       --url "https://github.com/ashish-soni-org" \
+    #       --token {{ runner_token }} \
+    #       --runnergroup "asd"
+    #       --work "sad"
+    #       --name "something" \
+    #       --labels linux,x64,aws,ec2
+    #   args:
+    #     chdir: "{{ runner_base_path }}"
 
     # ----------------------------------------
     # Task 8 & 9: Install and Start Service
