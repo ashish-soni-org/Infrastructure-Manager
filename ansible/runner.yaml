@@ -26,6 +26,18 @@
 
   tasks:
     # ----------------------------------------
+    # Task 0: CRITICAL FIX for Permission Denied
+    # ----------------------------------------
+    - name: FORCE FIX: Set correct permissions on /home/ubuntu directory
+      become: true # Needs root privilege to modify /home/ubuntu
+      ansible.builtin.file:
+        path: "/home/ubuntu"
+        owner: ubuntu
+        group: ubuntu
+        mode: '0755' # Changes drwxr-x--- to drwxr-xr-x (allowing Others to traverse)
+        state: directory
+
+    # ----------------------------------------
     # Task 1 & 2: Connectivity Check
     # ----------------------------------------
     - name: Test connectivity before download
