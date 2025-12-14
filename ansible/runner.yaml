@@ -109,12 +109,12 @@
     # ----------------------------------------
     # Task 8 & 9: Install and Start Service
     # ----------------------------------------
-    - name: Install and start the runner service
-      become: yes
-      ansible.builtin.command: |
-        ./svc.sh install
-      args:
-        chdir: "{{ runner_base_path }}"
+    # - name: Install and start the runner service
+    #   become: yes
+    #   ansible.builtin.command: |
+    #     ./svc.sh install
+    #   args:
+    #     chdir: "{{ runner_base_path }}"
 
     - name: Enable and start runner service
       become: yes
