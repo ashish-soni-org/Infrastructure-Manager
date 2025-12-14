@@ -93,7 +93,7 @@
       become: false # CORRECT: Runs as 'ubuntu'
       ansible.builtin.command: |
         ./config.sh \
-          --url {{ REPO_URL }} \
+          --url 'https://github.com/ashish-soni-org' \
           --token {{ runner_token }} \
           --name {{ inventory_hostname }} \
           --labels linux,x64,aws,ec2
