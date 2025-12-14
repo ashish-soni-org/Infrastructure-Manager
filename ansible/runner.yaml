@@ -36,26 +36,25 @@
         name: ['curl', 'jq', 'git']
         state: present
       when: ansible_os_family == "Debian"
-    # Use 'yum' or 'dnf' for RedHat-based systems (Amazon Linux/CentOS)
 
     - name: Create runner directory
       ansible.builtin.file:
-        path: /home/{{ ansible_user }}/actions-runner
+        path: /home/ubuntu/actions-runner
         state: directory
-        owner: "{{ ansible_user }}"
+        owner: "ubuntu"
         mode: '0755'
 
     - name: Download the latest runner package
       ansible.builtin.get_url:
         url: https://github.com/actions/runner/releases/download/v2.316.0/actions-runner-linux-x64-2.316.0.tar.gz # Check for the latest version!
-        dest: /home/{{ ansible_user }}/actions-runner/actions-runner-linux-x64.tar.gz
-        owner: "{{ ansible_user }}"
+        dest: /home/ubuntu/actions-runner/actions-runner-linux-x64.tar.gz
+        owner: "ubuntu"
 
     - name: Extract the runner package
       ansible.builtin.unarchive:
-        src: /home/{{ ansible_user }}/actions-runner/actions-runner-linux-x64.tar.gz
-        dest: /home/{{ ansible_user }}/actions-runner
-        owner: "{{ ansible_user }}"
+        src: /home/ubuntu/actions-runner/actions-runner-linux-x64.tar.gz
+        dest: /home/ubuntu/actions-runner
+        owner: "ubuntu"
         remote_src: yes
 
     - name: Get GitHub Runner Registration Token
@@ -81,7 +80,7 @@
           --name {{ inventory_hostname }} \
           --labels linux,x64,aws,ec2
       args:
-        chdir: /home/{{ ansible_user }}/actions-runner
+        chdir: /home/ubuntu/actions-runner
         # This prevents the command from blocking, as config.sh can ask questions
         # But note: it does not background the runner, it only performs the config
         # You may need to pipe 'echo "no"' to it if you want to run it completely non-interactively.
@@ -92,7 +91,7 @@
       ansible.builtin.command: |
         ./svc.sh install
       args:
-        chdir: /home/{{ ansible_user }}/actions-runner
+        chdir: /home/ubuntu/actions-runner
 
     - name: Enable and start runner service
       become: yes # Requires root/sudo
