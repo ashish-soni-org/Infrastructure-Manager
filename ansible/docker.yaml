@@ -13,23 +13,15 @@
     - name: Wait for connection
       wait_for_connection:
 
-- name: Install and start Docker on Ubuntu
+  
+- name: Install Docker Engine on Ubuntu EC2 Instance
   hosts: all
-  gather_facts: false
-  become: true
+  become: yes # Use sudo/elevated privileges for installation tasks
 
   vars:
     ansible_connection: aws_ssm
     ansible_aws_ssm_bucket_name: ansible-ssm-artifacts-ashish-123
     ansible_aws_ssm_region: ap-south-1
-
-  ---
-- name: Install Docker Engine on Ubuntu EC2 Instance
-  hosts: your_ec2_hosts # Replace with your target host or group name (defined in inventory)
-  become: yes # Use sudo/elevated privileges for installation tasks
-
-  vars:
-    docker_user: ubuntu # Define the user to add to the 'docker' group (default Ubuntu EC2 user)
 
   tasks:
     - name: Update apt cache

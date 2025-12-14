@@ -123,12 +123,6 @@
         enabled: yes
         state: started
 
-    - name: Make runner online for jobs
-      ansible.builtin.command: |
-        ./run.sh
-      args:
-        chdir: "{{ runner_base_path }}"
-
 
 
 
