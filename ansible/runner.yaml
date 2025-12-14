@@ -103,10 +103,19 @@
 
     - name: Configure the runner
       become: false # CORRECT: Runs as 'ubuntu'
+      ansible.builtin.debug: |
+        echo "HELLO!!"
+        pwd
+        whoami
+
+    - name: Configure the runner
+      become: false # CORRECT: Runs as 'ubuntu'
       ansible.builtin.command: |
         ./config.sh \
           --url "https://github.com/ashish-soni-org" \
           --token {{ runner_token }} \
+          --runnergroup "asd"
+          --work "sad"
           --name "something" \
           --labels linux,x64,aws,ec2
       args:
