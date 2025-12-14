@@ -24,20 +24,20 @@
     ansible_aws_ssm_region: ap-south-1
 
   tasks:
-    - name: Update apt cache
-      ansible.builtin.apt:
-        update_cache: yes
-        cache_valid_time: 3600
+    # - name: Update apt cache
+    #   ansible.builtin.apt:
+    #     update_cache: yes
+    #     cache_valid_time: 3600
 
-    - name: Install prerequisites
-      ansible.builtin.apt:
-        name:
-          - apt-transport-https
-          - ca-certificates
-          - curl
-          - gnupg
-          - lsb-release
-        state: present
+    # - name: Install prerequisites
+    #   ansible.builtin.apt:
+    #     name:
+    #       - apt-transport-https
+    #       - ca-certificates
+    #       - curl
+    #       - gnupg
+    #       - lsb-release
+    #     state: present
 
     - name: Ensure /etc/apt/keyrings directory exists and is secured
       ansible.builtin.file:
