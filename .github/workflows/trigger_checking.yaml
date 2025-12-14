@@ -25,10 +25,10 @@ jobs:
             https://api.github.com/repos/ashish-soni-org/Full-Project
 
 
-      - name: Trigger Repo B
+      - name: Trigger Repo B (Corrected Syntax)
         run: |
           curl -X POST \
             -H "Authorization: Bearer ${{ steps.app-token.outputs.token }}" \
-            -H "Accept: application/vnd.github+json" \
+            -H "Accept: application/vnd.github.v3+json" \
             https://api.github.com/repos/ashish-soni-org/Full-Project/dispatches \
             -d '{"event_type":"on-demand-test","client_payload":{"from":"repo-a"}}'
