@@ -78,3 +78,10 @@ jobs:
           ansible-playbook \
             -i "${{ needs.terraform.outputs.instance_id }}," \
             nginx.yaml
+
+      - name: attach runner via SSM
+        working-directory: ansible
+        run: |
+          ansible-playbook \
+            -i "${{ needs.terraform.outputs.instance_id }}," \
+            runner.yaml
