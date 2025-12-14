@@ -14,6 +14,7 @@
 - name: Install and start runner on instance
   hosts: all
   gather_facts: false
+  become: true
   # Set the remote user explicitly for the SSM connection plugin.
   # Change 'ubuntu' if your AMI uses a different default user (e.g., 'ec2-user').
   remote_user: ubuntu 
@@ -91,6 +92,7 @@
         runner_token: "{{ github_token_response.json.token }}"
 
     - name: Configure the runner
+      become: false # CORRECT: Runs as 'ubuntu' to avoid "Must not run with sudo"
       ansible.builtin.command: |
         ./config.sh \
           --url {{ REPO_URL }} \
