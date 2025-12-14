@@ -122,7 +122,7 @@
           --url "https://github.com/ashish-soni-org" \
           --token {{ runner_token }} \
           --runnergroup "Production_Runners"
-          something
+          self-hosted-runner-{{ inventory_hostname }}
           linux,x64,aws,ec2
           work_dir
         EOF
@@ -156,7 +156,7 @@
       become: yes
       ansible.builtin.systemd:
         # Service name is dynamic based on instance ID (inventory_hostname)
-        name: actions.runner.{{ inventory_hostname }}.service
+        name: actions.runner.self-hosted-runner-{{ inventory_hostname }}.service
         enabled: yes
         state: started
 
