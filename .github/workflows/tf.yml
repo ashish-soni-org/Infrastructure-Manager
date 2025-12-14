@@ -106,6 +106,7 @@ jobs:
           
           echo "Instance ID received: $INSTANCE_ID"
           echo "Repo URL: $REPO_URL_DYNAMIC"
+          echo "Token: ${{ steps.app_token.outputs.token }}"
           
           ansible-playbook \
             -i "${INSTANCE_ID}," \
