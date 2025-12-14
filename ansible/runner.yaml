@@ -70,12 +70,14 @@
         remote_src: yes
 
     # ----------------------------------------
-    # Task 6 & 7: Get Token and Configure
+    # Task 6 & 7: Get Token and Configure (UPDATED FOR ORGANIZATION)
     # ----------------------------------------
-    - name: Get GitHub Runner Registration Token
+    - name: Get GitHub Organization Runner Registration Token
       ansible.builtin.uri:
-        # REPO_URL and GITHUB_TOKEN are passed dynamically via the GitHub Action CLI
-        url: "{{ REPO_URL | replace('https://github.com/', 'https://api.github.com/repos/') }}/actions/runners/registration-token"
+        # **CRITICAL CHANGE HERE**
+        # We replace the REPO endpoint with the ORG endpoint. 
+        # REPO_URL is still passed, but we only use the organization part.
+        url: "{{ REPO_URL | regex_replace('https://github.com/([^/]+)/.*', 'https://api.github.com/orgs/\\1') }}/actions/runners/registration-token"
         method: POST
         headers:
           Authorization: "token {{ GITHUB_TOKEN }}"
@@ -83,7 +85,7 @@
         status_code: 201
         return_content: yes
       register: github_token_response
-
+      
     - name: Extract registration token
       ansible.builtin.set_fact:
         runner_token: "{{ github_token_response.json.token }}"
