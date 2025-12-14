@@ -89,8 +89,8 @@ jobs:
           app-id: ${{ secrets.GH_APP_ID }}
           private-key: ${{ secrets.GH_APP_PRIVATE_KEY }}
           owner: ${{ github.repository_owner }} 
-          repositories: ${{ github.event.repository.name }}
-          # The token will inherit the App's full permissions on this repo.
+          # REMOVED: repositories: ${{ github.event.repository.name }} 
+          # This should give the token the full Organization-level scope.
       
       # -----------------------------------------------------------
       # 2. RUN ANSIBLE: Uses the generated token and dynamic instance ID
