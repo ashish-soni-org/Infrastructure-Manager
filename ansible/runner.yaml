@@ -122,8 +122,12 @@
         name: actions.runner.ashish-soni-org.self-hosted-runner-{{ inventory_hostname }}.service
         enabled: yes
         state: started
+
+    - name: Make runner online for jobs
       ansible.builtin.command: |
         ./run.sh
+      args:
+        chdir: "{{ runner_base_path }}"
 
 
 
