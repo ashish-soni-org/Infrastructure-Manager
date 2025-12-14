@@ -122,8 +122,8 @@
           --url "https://github.com/ashish-soni-org" \
           --token {{ runner_token }} \
           --runnergroup "Production_Runners"
-          --work "_work"
           --name "something" \
+          --work "_work"
           --labels linux,x64,aws,ec2
         EOF
       args:
