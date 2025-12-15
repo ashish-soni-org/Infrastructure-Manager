@@ -44,7 +44,7 @@
         mode: '0755'
 
     - name: Add Docker APT repository
-      ansible.builtin.apt_repository:
+      ansible.builtin.apt_key:
         repo: >
           deb [arch=amd64 signed-by=/etc/apt/keyrings/docker.gpg]
           https://download.docker.com/linux/ubuntu
