@@ -40,8 +40,18 @@
     - name: Add Docker official GPG key
       ansible.builtin.get_url:
         url: https://download.docker.com/linux/ubuntu/gpg
-        dest: /etc/apt/keyrings/docker.gpg
-        mode: '0755'
+        dest: /etc/apt/keyrings/docker.asc
+        mode: '0644'
+
+    - name: Convert Docker GPG key to binary keyring
+      ansible.builtin.command:
+        cmd: gpg --dearmor -o /etc/apt/keyrings/docker.gpg /tmp/docker.asc
+        creates: /etc/apt/keyrings/docker.gpg
+
+    - name: Ensure permissions on Docker GPG key
+      ansible.builtin.file:
+        path: /etc/apt/keyrings/docker.gpg
+        mode: '0644'
 
     - name: Add Docker APT repository
       ansible.builtin.apt_repository:
