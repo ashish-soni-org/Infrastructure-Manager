@@ -116,7 +116,7 @@
 
     - name: Enable and start runner service
       become: yes
-      ansible.builtin.systemd:
+      ansible.builtin.systemd_service:
         name: actions.runner.ashish-soni-org.self-hosted-runner-{{ inventory_hostname }}.service
         daemon_reload: true
         enabled: yes
