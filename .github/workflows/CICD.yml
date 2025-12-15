@@ -45,71 +45,71 @@ jobs:
         run: |
           echo "instance_id=$(terraform output -raw instance_id)" >> $GITHUB_OUTPUT
   
-  install_nginx:
-    name: Installing NGINX
-    needs: resource_provision
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: ansible
-    steps:
-      - name: Setup AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ secrets.AWS_DEFAULT_REGION }}
+  # install_nginx:
+  #   name: Installing NGINX
+  #   needs: resource_provision
+  #   runs-on: ubuntu-latest
+  #   defaults:
+  #     run:
+  #       working-directory: ansible
+  #   steps:
+  #     - name: Setup AWS Credentials
+  #       uses: aws-actions/configure-aws-credentials@v4
+  #       with:
+  #         aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+  #         aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+  #         aws-region: ${{ secrets.AWS_DEFAULT_REGION }}
 
-      - name: Checkout repo
-        uses: actions/checkout@v4
+  #     - name: Checkout repo
+  #       uses: actions/checkout@v4
 
-      - name: Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-          check-latest: true
+  #     - name: Setup Python
+  #       uses: actions/setup-python@v5
+  #       with:
+  #         python-version: "3.12"
+  #         check-latest: true
 
-      - name: Install Ansible
-        run: pip install ansible boto3 botocore
+  #     - name: Install Ansible
+  #       run: pip install ansible boto3 botocore
 
-      - name: Install NGINX Server
-        run: |
-          ansible-playbook \
-            -i "${{ needs.resource_provision.outputs.instance_id }}," \
-            nginx.yaml
+  #     - name: Install NGINX Server
+  #       run: |
+  #         ansible-playbook \
+  #           -i "${{ needs.resource_provision.outputs.instance_id }}," \
+  #           nginx.yaml
   
-  install_docker:
-    name: Installing Docker
-    needs: resource_provision
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: ansible
-    steps:
-      - name: Setup AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ secrets.AWS_DEFAULT_REGION }}
+  # install_docker:
+  #   name: Installing Docker
+  #   needs: resource_provision
+  #   runs-on: ubuntu-latest
+  #   defaults:
+  #     run:
+  #       working-directory: ansible
+  #   steps:
+  #     - name: Setup AWS Credentials
+  #       uses: aws-actions/configure-aws-credentials@v4
+  #       with:
+  #         aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+  #         aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+  #         aws-region: ${{ secrets.AWS_DEFAULT_REGION }}
           
-      - name: Checkout repo
-        uses: actions/checkout@v4
+  #     - name: Checkout repo
+  #       uses: actions/checkout@v4
 
-      - name: Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-          check-latest: true
+  #     - name: Setup Python
+  #       uses: actions/setup-python@v5
+  #       with:
+  #         python-version: "3.12"
+  #         check-latest: true
 
-      - name: Install Ansible
-        run: pip install ansible boto3 botocore
+  #     - name: Install Ansible
+  #       run: pip install ansible boto3 botocore
 
-      - name: Install Docker Service
-        run: |
-          ansible-playbook \
-            -i "${{ needs.resource_provision.outputs.instance_id }}," \
-            docker.yaml
+  #     - name: Install Docker Service
+  #       run: |
+  #         ansible-playbook \
+  #           -i "${{ needs.resource_provision.outputs.instance_id }}," \
+  #           docker.yaml
 
   hosting_runner:
     name: Hosting new runner
@@ -157,31 +157,31 @@ jobs:
             -e "GITHUB_TOKEN=${{ steps.app_token.outputs.token }}" \
             -e "REPO_URL=$REPO_URL_DYNAMIC"
             
-  deploy_website_and_projects:
-    needs: hosting_runner
-    runs-on: ubuntu-latest
-    steps:
-      - name: Generate GitHub App token
-        id: app-token
-        uses: actions/create-github-app-token@v1
-        with:
-          app-id: ${{ secrets.GH_APP_ID }}
-          private-key: ${{ secrets.GH_APP_PRIVATE_KEY }}
-          owner: ashish-soni-org
-          repositories: Full-Project
+  # deploy_website_and_projects:
+  #   needs: hosting_runner
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - name: Generate GitHub App token
+  #       id: app-token
+  #       uses: actions/create-github-app-token@v1
+  #       with:
+  #         app-id: ${{ secrets.GH_APP_ID }}
+  #         private-key: ${{ secrets.GH_APP_PRIVATE_KEY }}
+  #         owner: ashish-soni-org
+  #         repositories: Full-Project
 
-      - name: Check Permissions
-        run: |
-            curl -i \
-            -H "Authorization: Bearer ${{ steps.app-token.outputs.token }}" \
-            -H "Accept: application/vnd.github+json" \
-            https://api.github.com/repos/ashish-soni-org/Full-Project
+  #     - name: Check Permissions
+  #       run: |
+  #           curl -i \
+  #           -H "Authorization: Bearer ${{ steps.app-token.outputs.token }}" \
+  #           -H "Accept: application/vnd.github+json" \
+  #           https://api.github.com/repos/ashish-soni-org/Full-Project
 
 
-      - name: Trigger Other Repositories
-        run: |
-          curl -X POST \
-            -H "Authorization: Bearer ${{ steps.app-token.outputs.token }}" \
-            -H "Accept: application/vnd.github.v3+json" \
-            https://api.github.com/repos/ashish-soni-org/Full-Project/dispatches \
-            -d '{"event_type":"on-demand-test","client_payload":{"from":"repo-a"}}'
+  #     - name: Trigger Other Repositories
+  #       run: |
+  #         curl -X POST \
+  #           -H "Authorization: Bearer ${{ steps.app-token.outputs.token }}" \
+  #           -H "Accept: application/vnd.github.v3+json" \
+  #           https://api.github.com/repos/ashish-soni-org/Full-Project/dispatches \
+  #           -d '{"event_type":"on-demand-test","client_payload":{"from":"repo-a"}}'
