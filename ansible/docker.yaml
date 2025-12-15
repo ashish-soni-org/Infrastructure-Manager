@@ -31,28 +31,28 @@
         state: present
         update_cache: true
 
-    # - name: Ensure Keyrings path exists
-    #   ansible.builtin.file:
-    #     path: /etc/apt/keyrings
-    #     state: directory
-    #     mode: '0755'
+    - name: Ensure Keyrings path exists
+      ansible.builtin.file:
+        path: /etc/apt/keyrings
+        state: directory
+        mode: '0755'
 
-    # - name: Add Docker official GPG key
-    #   ansible.builtin.get_url:
-    #     url: https://download.docker.com/linux/ubuntu/gpg
-    #     dest: /etc/apt/keyrings/docker.gpg
-    #     mode: '0644'
+    - name: Add Docker official GPG key
+      get_url:
+        url: https://download.docker.com/linux/ubuntu/gpg
+        dest: /etc/apt/keyrings/docker.gpg
+        mode: '0755'
 
     - name: Add Docker key from file
       ansible.builtin.apt_key:
-        file: https://download.docker.com/linux/ubuntu/gpg
+        file: /etc/apt/keyrings/docker.gpg
         state: present
 
     - name: Add Docker APT repository
       ansible.builtin.apt_repository:
         repo: >
-          deb [arch={{ ansible_facts['architecture'] }} signed-by=/etc/apt/keyrings/docker.gpg]
-          https://download.docker.com/linux/ubuntu/
+          deb [arch={{ ansible_facts['architecture'] }} signed-by=/etc/apt/keyrings/docker.gpg] \
+          https://download.docker.com/linux/ubuntu/ \
           {{ ansible_distribution_release }} stable
         state: present
         filename: docker
