@@ -13,7 +13,7 @@
   hosts: all
   gather_facts: false
   become: true # Keep global 'become: true' for the service tasks later
-  remote_user: ubuntu 
+  remote_user: ubuntu
 
   vars:
     ansible_connection: aws_ssm
@@ -113,15 +113,6 @@
         ./svc.sh install
       args:
         chdir: "{{ runner_base_path }}"
-
-    - name: Create or Update Runner Systemd Service File
-      become: yes
-      ansible.builtin.template:
-        src: templates/runner.service.j2 # This file MUST have User=ubuntu and Type=exec
-        dest: /etc/systemd/system/actions.runner.ashish-soni-org.self-hosted-runner-{{ inventory_hostname }}.service
-        owner: root
-        group: root
-        mode: '0644'
 
     - name: Enable and start runner service
       become: yes
