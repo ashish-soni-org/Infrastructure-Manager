@@ -60,11 +60,11 @@ jobs:
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.11"
+          python-version: "3.13"
 
       - name: Install Ansible + AWS deps
         run: |
-          pip install ansible
+          pip install ansible boto3 botocore
 
       - uses: aws-actions/configure-aws-credentials@v4
         with:

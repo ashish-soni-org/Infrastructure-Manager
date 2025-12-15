@@ -43,11 +43,6 @@
     #     dest: /etc/apt/keyrings/docker.gpg
     #     mode: '0755'
 
-    # - name: Add Docker key from file
-    #   ansible.builtin.apt_key:
-    #     file: /etc/apt/keyrings/docker.gpg
-    #     state: present
-
     - name: Add Docker APT repository
       ansible.builtin.apt_repository:
         repo: >
