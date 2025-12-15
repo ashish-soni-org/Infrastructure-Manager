@@ -3,6 +3,54 @@ name: CI/CD Pipeline Example
 # Triggers the workflow on push and pull request events
 on: [push, pull_request]
 
+jobs:
+  build:
+    runs-on: ubuntu-latest # The environment where the job runs
+    steps:
+      - uses: actions/checkout@v4 # 1. Checkout the repository code
+
+      # -------------------------------------------------------------
+      # 2. NEW TASK ADDED HERE: Setup Environment
+      # This uses a marketplace action (actions/setup-node) 
+      # to ensure the correct environment is ready before building.
+      # -------------------------------------------------------------
+      - name: Setup Node.js Environment
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20' # Specify the required version for your project
+      
+      # -------------------------------------------------------------
+      # 3. Original Build Task
+      # -------------------------------------------------------------
+      - name: Build Code Artifacts
+        run: |
+          echo "Starting the Build Stage..."
+          # Your build commands go here (e.g., npm install, maven build, etc.)
+          npm install 
+          npm run build 
+
+  # You would continue with your next job (e.g., 'test') here...
+          
+  test:
+    runs-on: ubuntu-latest
+    needs: [build] # <-- CRITICAL: This ensures 'test' only runs AFTER 'build' finishes successfully
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run Unit Tests
+        run: |
+          echo "Starting the Test Stage..."
+          # Your test commands go here (e.g., npm test)
+
+  deploy:
+    runs-on: ubuntu-latest
+    needs: [test] # <-- This ensures 'deploy' only runs AFTER 'test' finishes successfully
+    steps:
+      - uses: actions/checkout@v4
+      - name: Deploy to Cloud Instance
+        run: |
+          echo "Starting the Deploy Stage..."
+          # Your deployment commands go here (e.g., push to AEM/Azure)
+
 jobs: # <-- This section defines your sequential or parallel "stages"
   build:
     runs-on: ubuntu-latest # The environment where the job runs
