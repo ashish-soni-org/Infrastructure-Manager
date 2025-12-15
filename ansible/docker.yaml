@@ -10,7 +10,7 @@
     # https://repost.aws/knowledge-center/s3-http-307-response
   tasks:
     - name: Wait for connection
-      wait_for_connection:
+      ansible.builtin.wait_for_connection:
 
 - name: Install Docker
   hosts: all
@@ -38,7 +38,7 @@
         mode: '0755'
 
     - name: Add Docker official GPG key
-      get_url:
+      ansible.builtin.get_url:
         url: https://download.docker.com/linux/ubuntu/gpg
         dest: /etc/apt/keyrings/docker.gpg
         mode: '0755'
@@ -51,8 +51,8 @@
     - name: Add Docker APT repository
       ansible.builtin.apt_repository:
         repo: >
-          deb [arch={{ ansible_facts['architecture'] }} signed-by=/etc/apt/keyrings/docker.gpg] 
-          https://download.docker.com/linux/ubuntu/ 
+          deb [arch={{ ansible_facts['architecture'] }} signed-by=/etc/apt/keyrings/docker.gpg]
+          https://download.docker.com/linux/ubuntu
           {{ ansible_distribution_release }} stable
         state: present
         filename: docker
@@ -82,3 +82,4 @@
         name: "{{ ansible_user }}"
         groups: docker
         append: true
+        
