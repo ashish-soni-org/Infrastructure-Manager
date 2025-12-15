@@ -37,20 +37,33 @@
         state: directory
         mode: '0755'
 
-    - name: Add Docker official GPG key
-      ansible.builtin.get_url:
-        url: https://download.docker.com/linux/ubuntu/gpg
-        dest: /etc/apt/keyrings/docker.gpg
-        mode: '0755'
+    - name: One way to avoid apt_key once it is removed from your distro
+      block:
+        - name: Add Docker official GPG key
+          ansible.builtin.get_url:
+            url: https://download.docker.com/linux/ubuntu/gpg
+            dest: /etc/apt/keyrings/docker.gpg
 
-    - name: Add Docker APT repository
-      ansible.builtin.apt_key:
-        repo: >
-          deb [arch=amd64 signed-by=/etc/apt/keyrings/docker.gpg]
-          https://download.docker.com/linux/ubuntu
-          {{ ansible_distribution_release }} stable
-        state: present
-        filename: docker
+        - name: Add Docker APT repository
+          ansible.builtin.apt_repository:
+            repo: >
+              deb [arch=amd64 signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu {{ ansible_distribution_release }} stable
+            state: present
+
+    # - name: Add Docker official GPG key
+    #   ansible.builtin.get_url:
+    #     url: https://download.docker.com/linux/ubuntu/gpg
+    #     dest: /etc/apt/keyrings/docker.gpg
+    #     mode: '0755'
+
+    # - name: Add Docker APT repository
+    #   ansible.builtin.apt_repository:
+    #     repo: >
+    #       deb [arch=amd64 signed-by=/etc/apt/keyrings/docker.gpg]
+    #       https://download.docker.com/linux/ubuntu
+    #       {{ ansible_distribution_release }} stable
+    #     state: present
+    #     filename: docker
 
     - name: Install Docker Engine packages
       ansible.builtin.apt:
