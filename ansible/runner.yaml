@@ -108,17 +108,17 @@
     - name: Install and start the runner service
       become: true
       ansible.builtin.command: |
-        ./svc.sh install
+        -u ubuntu ./svc.sh install
       args:
         chdir: "{{ runner_base_path }}"
 
-    # - name: Enable and start runner service
-    #   become: true
-    #   ansible.builtin.systemd_service:
-    #     name: actions.runner.ashish-soni-org.self-hosted-runner-{{ inventory_hostname }}.service
-    #     daemon_reload: true
-    #     enabled: true
-    #     state: started
+    - name: Enable and start runner service
+      become: true
+      ansible.builtin.systemd_service:
+        name: actions.runner.ashish-soni-org.self-hosted-runner-{{ inventory_hostname }}.service
+        daemon_reload: true
+        enabled: true
+        state: started
 
 
 
