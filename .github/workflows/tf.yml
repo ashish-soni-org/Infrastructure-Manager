@@ -15,9 +15,7 @@ jobs:
       # to ensure the correct environment is ready before building.
       # -------------------------------------------------------------
       - name: Setup Node.js Environment
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20' # Specify the required version for your project
+        run: echo "first name"
       
       # -------------------------------------------------------------
       # 3. Original Build Task
@@ -26,8 +24,6 @@ jobs:
         run: |
           echo "Starting the Build Stage..."
           # Your build commands go here (e.g., npm install, maven build, etc.)
-          npm install 
-          npm run build 
 
   # You would continue with your next job (e.g., 'test') here...
           
