@@ -65,7 +65,7 @@
     - name: Install Docker Engine packages
       ansible.builtin.apt:
         name:
-          - docker-ce
+          # - docker-ce
           - docker-ce-cli
           - containerd.io
         state: present
