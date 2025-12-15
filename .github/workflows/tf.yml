@@ -6,52 +6,52 @@ on:
   pull_request:
 
 jobs:
-  terraform:
-    name: Terraform
-    runs-on: ubuntu-latest
+  # terraform:
+  #   name: Terraform
+  #   runs-on: ubuntu-latest
 
-    defaults:
-      run:
-        working-directory: terraform
+  #   defaults:
+  #     run:
+  #       working-directory: terraform
 
-    outputs:
-      instance_id: ${{ steps.tf_outputs.outputs.instance_id }}
+  #   outputs:
+  #     instance_id: ${{ steps.tf_outputs.outputs.instance_id }}
 
-    steps:
-      - name: Checkout repo
-        uses: actions/checkout@v4
+  #   steps:
+  #     - name: Checkout repo
+  #       uses: actions/checkout@v4
 
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v3
-        with:
-          terraform_version: 1.6.6
+  #     - name: Setup Terraform
+  #       uses: hashicorp/setup-terraform@v3
+  #       with:
+  #         terraform_version: 1.6.6
 
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ secrets.AWS_DEFAULT_REGION }}
+  #     - name: Configure AWS credentials
+  #       uses: aws-actions/configure-aws-credentials@v4
+  #       with:
+  #         aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+  #         aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+  #         aws-region: ${{ secrets.AWS_DEFAULT_REGION }}
 
-      - name: Terraform Init
-        run: terraform init
+  #     - name: Terraform Init
+  #       run: terraform init
 
-      - name: Terraform Validate
-        run: terraform validate
+  #     - name: Terraform Validate
+  #       run: terraform validate
 
-      - name: Terraform Apply
-        if: github.ref == 'refs/heads/main'
-        run: terraform apply -auto-approve
+  #     - name: Terraform Apply
+  #       if: github.ref == 'refs/heads/main'
+  #       run: terraform apply -auto-approve
 
-      - name: Export Terraform outputs
-        id: tf_outputs
-        run: |
-          echo "instance_id=$(terraform output -raw instance_id)" >> $GITHUB_OUTPUT
+  #     - name: Export Terraform outputs
+  #       id: tf_outputs
+  #       run: |
+  #         echo "instance_id=$(terraform output -raw instance_id)" >> $GITHUB_OUTPUT
 
   ansible:
     name: Ansible
     runs-on: ubuntu-latest
-    needs: terraform
+    # needs: terraform
 
     steps:
       - name: Checkout repo
@@ -117,12 +117,217 @@ jobs:
         working-directory: ansible
         run: |
           ansible-playbook \
-            -i "${{ needs.terraform.outputs.instance_id }}," \
+            -i "i-05c26f4c9d003aea2," \
             docker.yaml
 
-      # - name: Run Dcoker via SSM
-      #   working-directory: ansible
-      #   run: |
-      #     ansible-playbook \
-      #       -i "i-0dd5f9361f4469a94," \
-      #       docker.yaml
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# name: Terraform + Ansible CI
+
+# on:
+#   push:
+#     branches: ["main"]
+#   pull_request:
+
+# jobs:
+#   terraform:
+#     name: Terraform
+#     runs-on: ubuntu-latest
+
+#     defaults:
+#       run:
+#         working-directory: terraform
+
+#     outputs:
+#       instance_id: ${{ steps.tf_outputs.outputs.instance_id }}
+
+#     steps:
+#       - name: Checkout repo
+#         uses: actions/checkout@v4
+
+#       - name: Setup Terraform
+#         uses: hashicorp/setup-terraform@v3
+#         with:
+#           terraform_version: 1.6.6
+
+#       - name: Configure AWS credentials
+#         uses: aws-actions/configure-aws-credentials@v4
+#         with:
+#           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+#           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+#           aws-region: ${{ secrets.AWS_DEFAULT_REGION }}
+
+#       - name: Terraform Init
+#         run: terraform init
+
+#       - name: Terraform Validate
+#         run: terraform validate
+
+#       - name: Terraform Apply
+#         if: github.ref == 'refs/heads/main'
+#         run: terraform apply -auto-approve
+
+#       - name: Export Terraform outputs
+#         id: tf_outputs
+#         run: |
+#           echo "instance_id=$(terraform output -raw instance_id)" >> $GITHUB_OUTPUT
+
+#   ansible:
+#     name: Ansible
+#     runs-on: ubuntu-latest
+#     needs: terraform
+
+#     steps:
+#       - name: Checkout repo
+#         uses: actions/checkout@v4
+
+#       - name: Setup Python
+#         uses: actions/setup-python@v5
+#         with:
+#           python-version: "3.11"
+
+#       - name: Install Ansible + AWS deps
+#         run: |
+#           pip install ansible boto3 botocore
+
+#       - uses: aws-actions/configure-aws-credentials@v4
+#         with:
+#           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+#           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+#           aws-region: ${{ secrets.AWS_DEFAULT_REGION }}
+
+#       # - name: Run Ansible via SSM
+#       #   working-directory: ansible
+#       #   run: |
+#       #     ansible-playbook \
+#       #       -i "${{ needs.terraform.outputs.instance_id }}," \
+#       #       nginx.yaml
+
+#       # -----------------------------------------------------------
+#       # 1. FINAL FIXED STEP: Generate GitHub App Token (Permission inputs removed)
+#       # -----------------------------------------------------------
+#       # - name: Generate GitHub App Token
+#       #   id: app_token
+#       #   uses: actions/create-github-app-token@v1
+#       #   with:
+#       #     app-id: ${{ secrets.GH_APP_ID }}
+#       #     private-key: ${{ secrets.GH_APP_PRIVATE_KEY }}
+#       #     # owner: ${{ github.repository_owner }} 
+#       #     # REMOVED: repositories: ${{ github.event.repository.name }} 
+#       #     # This should give the token the full Organization-level scope.
+      
+#       # # -----------------------------------------------------------
+#       # # 2. RUN ANSIBLE: Uses the generated token and dynamic instance ID
+#       # # -----------------------------------------------------------
+#       # - name: Attach Runner via SSM (Dynamic)
+#       #   working-directory: ansible
+#       #   run: |
+#       #     # 1. Get the dynamic Instance ID from the preceding 'terraform' job output
+#       #     INSTANCE_ID="${{ needs.terraform.outputs.instance_id }},"
+          
+#       #     # 2. Construct the dynamic REPO_URL
+#       #     REPO_URL_DYNAMIC="${{ github.server_url }}/${{ github.repository }}"
+          
+#       #     echo "Instance ID received: $INSTANCE_ID"
+#       #     echo "Repo URL: $REPO_URL_DYNAMIC"
+          
+#       #     ansible-playbook \
+#       #       -i "${INSTANCE_ID}," \
+#       #       runner.yaml \
+#       #       -e "GITHUB_TOKEN=${{ steps.app_token.outputs.token }}" \
+#       #       -e "REPO_URL=$REPO_URL_DYNAMIC"
+
+#       - name: Run Dcoker via SSM
+#         working-directory: ansible
+#         run: |
+#           ansible-playbook \
+#             -i "${{ needs.terraform.outputs.instance_id }}," \
+#             docker.yaml
