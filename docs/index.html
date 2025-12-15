@@ -1,33 +1,35 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pipeline Trigger Utility</title>
-    <link rel="stylesheet" href="style.css">
+  <meta charset="UTF-8" />
+  <title>Instance Pipeline Trigger</title>
+  <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-    <div class="container">
-        <h1>CI/CD Instance Provisioning</h1>
-        
-        <form id="pipelineForm">
-            <div class="field-group">
-                <label for="instanceCount">Number of Instances to Create:</label>
-                <input type="number" id="instanceCount" min="1" max="10" value="1" required>
-                <button type="button" id="generateFields">Generate Fields</button>
-            </div>
-            
-            <hr>
+  <header>
+    <h1>Infrastructure Pipeline Trigger</h1>
+    <label class="switch">
+      <input type="checkbox" id="darkModeToggle">
+      <span class="slider"></span>
+    </label>
+  </header>
 
-            <div id="instanceFields">
-                </div>
+  <main>
+    <section>
+      <label>Instance Numbers (comma separated)</label>
+      <input type="text" id="instanceNumbers" placeholder="1,2,3">
 
-            <button type="submit" id="triggerPipeline">Trigger Pipeline (AJAX)</button>
-        </form>
+      <label>Instance Names (comma separated)</label>
+      <input type="text" id="instanceNames" placeholder="runner-1,runner-2,runner-3">
 
-        <p id="message" class="hidden"></p>
-    </div>
+      <button id="generate">Generate Instances</button>
+    </section>
 
-    <script src="script.js"></script>
+    <section id="instancesContainer"></section>
+
+    <button id="triggerPipeline" class="primary">Trigger Pipeline</button>
+  </main>
+
+  <script src="script.js"></script>
 </body>
 </html>
