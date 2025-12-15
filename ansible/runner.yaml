@@ -1,5 +1,3 @@
-# runner.yaml
-
 # Wait for SSM Agent to be available on the Instance
 - name: Wait for connection to be available
   hosts: all
@@ -9,7 +7,7 @@
     ansible_aws_ssm_region: ap-south-1
   tasks:
     - name: Wait for connection
-      wait_for_connection:
+      ansible.builtin.wait_for_connection:
 
 - name: Install and start runner on instance
   hosts: all

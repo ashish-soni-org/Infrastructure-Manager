@@ -26,6 +26,7 @@ jobs: # <-- This section defines your sequential or parallel "stages"
   deploy:
     runs-on: ubuntu-latest
     needs: [test] # <-- This ensures 'deploy' only runs AFTER 'test' finishes successfully
+    environment: production # Used for security and deployment tracking
     steps:
       - uses: actions/checkout@v4
       - name: Deploy to Cloud Instance
