@@ -148,7 +148,6 @@ jobs:
       - name: Create and Attach Runner
         working-directory: ansible
         run: |
-          # INSTANCE_ID="${{ needs.resource_provision.outputs.instance_id }},"
           REPO_URL_DYNAMIC="${{ github.server_url }}/${{ github.repository }}"
           
           ansible-playbook \
@@ -156,6 +155,18 @@ jobs:
             runner.yaml \
             -e "GITHUB_TOKEN=${{ steps.app_token.outputs.token }}" \
             -e "REPO_URL=$REPO_URL_DYNAMIC"
+          
+      # - name: Create and Attach Runner
+      #   working-directory: ansible
+      #   run: |
+      #     INSTANCE_ID="${{ needs.resource_provision.outputs.instance_id }},"
+      #     REPO_URL_DYNAMIC="${{ github.server_url }}/${{ github.repository }}"
+          
+      #     ansible-playbook \
+      #       -i "$i-08c33c638d2b32a83" \
+      #       runner.yaml \
+      #       -e "GITHUB_TOKEN=${{ steps.app_token.outputs.token }}" \
+      #       -e "REPO_URL=$REPO_URL_DYNAMIC"
             
   # deploy_website_and_projects:
   #   needs: hosting_runner
