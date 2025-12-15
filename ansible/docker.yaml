@@ -45,7 +45,7 @@
 
     - name: Convert Docker GPG key to binary keyring
       ansible.builtin.command:
-        cmd: gpg --dearmor -o /etc/apt/keyrings/docker.gpg /tmp/docker.asc
+        cmd: gpg --dearmor -o /etc/apt/keyrings/docker.gpg etc/apt/keyrings/docker.asc
         creates: /etc/apt/keyrings/docker.gpg
 
     - name: Ensure permissions on Docker GPG key
