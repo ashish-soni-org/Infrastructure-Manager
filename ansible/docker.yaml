@@ -22,26 +22,26 @@
     ansible_aws_ssm_region: ap-south-1
 
   tasks:
-    # - name: Install prerequisites packages
-    #   ansible.builtin.apt:
-    #     name:
-    #       - ca-certificates
-    #       - curl
-    #       - gnupg
-    #     state: present
-    #     update_cache: true
+    - name: Install prerequisites packages
+      ansible.builtin.apt:
+        name:
+          - ca-certificates
+          - curl
+          - gnupg
+        state: present
+        update_cache: true
 
-    # - name: Ensure Keyrings path exists
-    #   ansible.builtin.file:
-    #     path: /etc/apt/keyrings
-    #     state: directory
-    #     mode: '0755'
+    - name: Ensure Keyrings path exists
+      ansible.builtin.file:
+        path: /etc/apt/keyrings
+        state: directory
+        mode: '0755'
 
-    # - name: Add Docker official GPG key
-    #   ansible.builtin.get_url:
-    #     url: https://download.docker.com/linux/ubuntu/gpg
-    #     dest: /etc/apt/keyrings/docker.gpg
-    #     mode: '0755'
+    - name: Add Docker official GPG key
+      ansible.builtin.get_url:
+        url: https://download.docker.com/linux/ubuntu/gpg
+        dest: /etc/apt/keyrings/docker.gpg
+        mode: '0755'
 
     - name: Add Docker APT repository
       ansible.builtin.apt_repository:
