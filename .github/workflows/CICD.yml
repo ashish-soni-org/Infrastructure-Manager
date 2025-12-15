@@ -5,21 +5,9 @@ on:
     branches: ["main"]
 
 jobs:
-  Configure-AWS-Credentials:
-    name: Configure AWS Credentials
-    runs-on: ubuntu-latest
-    steps:
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ secrets.AWS_DEFAULT_REGION }}
-
-  Resource-Provision:
+  resource_provision:
     name: Provisioning required resources
     runs-on: ubuntu-latest
-    needs: Configure-AWS-Credentials
     defaults:
       run:
         working-directory: terraform
@@ -27,6 +15,13 @@ jobs:
       instance_id: ${{ steps.tf_outputs.outputs.instance_id }}
 
     steps:
+      - name: Setup AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_DEFAULT_REGION }}
+
       - name: Checkout repo
         uses: actions/checkout@v4
 
@@ -50,14 +45,23 @@ jobs:
         run: |
           echo "instance_id=$(terraform output -raw instance_id)" >> $GITHUB_OUTPUT
 
-  Hosting-Runner:
+  hosting_runner:
     name: Hosting new runner
     runs-on: ubuntu-latest
-    needs: Resource-Provision
+    needs: resource_provision
     defaults:
       run:
         working-directory: ansible
+    outputs:
+      runner_label: ${{ steps.set_label.outputs.label }}
     steps:
+      - name: Setup AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_DEFAULT_REGION }}
+
       - name: Checkout repo
         uses: actions/checkout@v4
 
@@ -66,8 +70,16 @@ jobs:
         with:
           python-version: "3.13"
 
-      - name: Install Ansible
-        run: pip install ansible
+      - name: Install Ansible + Boto
+        run: pip install ansible boto3 botocore
+      
+      # - name: Set Runner Label
+      #   id: set_label
+      #   run: |
+      #     # Use a combination of instance ID and run ID for a unique label
+      #     LABEL="self-hosted-${{ github.run_id }}-${{ needs.resource_provision.outputs.instance_id }}"
+      #     echo "label=$LABEL" >> $GITHUB_OUTPUT
+      #     echo "Generated Label: $LABEL"
 
       - name: Generate GitHub App Token
         id: app_token
@@ -76,17 +88,11 @@ jobs:
           app-id: ${{ secrets.GH_APP_ID }}
           private-key: ${{ secrets.GH_APP_PRIVATE_KEY }}
           
-      - name: Attach Runner via SSM (Dynamic)
+      - name: Create and Attach Runner
         working-directory: ansible
         run: |
-          # 1. Get the dynamic Instance ID from the preceding 'terraform' job output
-          INSTANCE_ID="${{ needs.Resource-Provision.outputs.instance_id }},"
-          
-          # 2. Construct the dynamic REPO_URL
+          INSTANCE_ID="${{ needs.resource_provision.outputs.instance_id }},"
           REPO_URL_DYNAMIC="${{ github.server_url }}/${{ github.repository }}"
-          
-          echo "Instance ID received: $INSTANCE_ID"
-          echo "Repo URL: $REPO_URL_DYNAMIC"
           
           ansible-playbook \
             -i "${INSTANCE_ID}," \
@@ -97,7 +103,7 @@ jobs:
   Installing-NGINX:
     name: Installing NGINX
     runs-on: ubuntu-latest
-    needs: Resource-Provision
+    needs: resource_provision
     defaults:
       run:
         working-directory: ansible
