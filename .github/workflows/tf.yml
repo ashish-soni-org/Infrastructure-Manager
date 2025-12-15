@@ -64,7 +64,7 @@ jobs:
 
       - name: Install Ansible + AWS deps
         run: |
-          pip install ansible boto3 botocore
+          pip install ansible
 
       - uses: aws-actions/configure-aws-credentials@v4
         with:
