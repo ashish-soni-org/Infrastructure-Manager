@@ -41,7 +41,7 @@
       ansible.builtin.get_url:
         url: https://download.docker.com/linux/ubuntu/gpg
         dest: /etc/apt/keyrings/docker.gpg
-        mode: '0644'
+        mode: '0755'
 
     - name: Add Docker APT repository
       ansible.builtin.apt_repository:
