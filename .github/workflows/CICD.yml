@@ -149,7 +149,7 @@ jobs:
         working-directory: ansible
         run: |
           ansible-playbook \
-            -i "$${{ needs.resource_provision.outputs.instance_id }}" \
+            -i "${{ needs.resource_provision.outputs.instance_id }}" \
             runner.yaml \
             -e "GITHUB_TOKEN=${{ steps.app_token.outputs.token }}" \
             -e "REPO_URL=${{ github.server_url }}/${{ github.repository }}"
