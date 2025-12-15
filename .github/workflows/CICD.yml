@@ -114,7 +114,7 @@ jobs:
   hosting_runner:
     name: Hosting new runner
     runs-on: ubuntu-latest
-    needs: resource_provision
+    # needs: resource_provision
     defaults:
       run:
         working-directory: ansible
