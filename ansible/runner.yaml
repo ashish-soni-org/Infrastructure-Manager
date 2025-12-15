@@ -64,7 +64,7 @@
         src: "{{ runner_base_path }}/actions-runner-linux-x64.tar.gz"
         dest: "{{ runner_base_path }}"
         owner: "{{ ansible_user }}"
-        remote_src: yes
+        remote_src: true
 
     # ----------------------------------------
     # Task 6 & 7: Get Token and Configure
@@ -81,7 +81,7 @@
           Accept: "application/vnd.github+json"
           X-GitHub-Api-Version: "2022-11-28"
         status_code: 201
-        return_content: yes
+        return_content: true
       register: github_token_response
 
     - name: Extract registration token
@@ -108,18 +108,19 @@
     # Task 8 & 9: Install and Start Service
     # ----------------------------------------
     - name: Install and start the runner service
-      become: yes
+      become: true
       ansible.builtin.command: |
         ./svc.sh install
       args:
         chdir: "{{ runner_base_path }}"
 
     - name: Enable and start runner service
-      become: yes
+      become: true
       ansible.builtin.systemd_service:
         name: actions.runner.ashish-soni-org.self-hosted-runner-{{ inventory_hostname }}.service
         daemon_reload: true
-        enabled: yes
+        become_user: ubuntu
+        enabled: true
         state: started
 
 
@@ -328,7 +329,7 @@
 #         src: "{{ runner_base_path }}/actions-runner-linux-x64.tar.gz"
 #         dest: "{{ runner_base_path }}"
 #         owner: "{{ ansible_user }}"
-#         remote_src: yes
+#         remote_src: true
 
 #     # ----------------------------------------
 #     # Task 6 & 7: Get Token and Configure (UPDATED FOR ORGANIZATION)
@@ -345,7 +346,7 @@
 #           Accept: "application/vnd.github+json"
 #           X-GitHub-Api-Version: "2022-11-28"
 #         status_code: 201
-#         return_content: yes
+#         return_content: true
 #       register: github_token_response
 
 #     - name: Extract registration token
@@ -367,16 +368,16 @@
 #     # Task 8 & 9: Install and Start Service
 #     # ----------------------------------------
 #     - name: Install and start the runner service
-#       become: yes
+#       become: true
 #       ansible.builtin.command: |
 #         ./svc.sh install
 #       args:
 #         chdir: "{{ runner_base_path }}"
 
 #     - name: Enable and start runner service
-#       become: yes
+#       become: true
 #       ansible.builtin.systemd:
 #         # Service name is dynamic based on instance ID (inventory_hostname)
 #         name: actions.runner.{{ inventory_hostname }}.service
-#         enabled: yes
+#         enabled: true
 #         state: started
