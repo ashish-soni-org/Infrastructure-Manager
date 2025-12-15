@@ -23,84 +23,84 @@
     runner_base_path: "/opt/actions-runner"
 
   tasks:
-    # # ----------------------------------------
-    # # Task 1 & 2: Connectivity Check
-    # # ----------------------------------------
-    # - name: Test connectivity before download
-    #   ansible.builtin.shell: curl -I https://github.com/
-    #   register: curl_check
+    # ----------------------------------------
+    # Task 1 & 2: Connectivity Check
+    # ----------------------------------------
+    - name: Test connectivity before download
+      ansible.builtin.shell: curl -I https://github.com/
+      register: curl_check
 
-    # - name: Print curl check result
-    #   ansible.builtin.debug:
-    #     var: curl_check.stdout_lines
+    - name: Print curl check result
+      ansible.builtin.debug:
+        var: curl_check.stdout_lines
 
-    # # ----------------------------------------
-    # # Task 3: Install Dependencies (Requires root)
-    # # ----------------------------------------
-    # - name: Install dependencies for runner
-    #   ansible.builtin.apt:
-    #     name: ['curl', 'jq', 'git']
-    #     state: present
-    #   when: ansible_os_family == "Debian"
+    # ----------------------------------------
+    # Task 3: Install Dependencies (Requires root)
+    # ----------------------------------------
+    - name: Install dependencies for runner
+      ansible.builtin.apt:
+        name: ['curl', 'jq', 'git']
+        state: present
+      when: ansible_os_family == "Debian"
 
-    # # ----------------------------------------
-    # # Task 4 & 5: Setup Runner Files
-    # # ----------------------------------------
-    # - name: Create runner directory
-    #   ansible.builtin.file:
-    #     path: "{{ runner_base_path }}"
-    #     state: directory
-    #     owner: "{{ ansible_user }}"
-    #     mode: '777'
+    # ----------------------------------------
+    # Task 4 & 5: Setup Runner Files
+    # ----------------------------------------
+    - name: Create runner directory
+      ansible.builtin.file:
+        path: "{{ runner_base_path }}"
+        state: directory
+        owner: "{{ ansible_user }}"
+        mode: '777'
 
-    # - name: Download the latest runner package
-    #   ansible.builtin.get_url:
-    #     url: https://github.com/actions/runner/releases/download/v2.316.0/actions-runner-linux-x64-2.316.0.tar.gz # Check for latest version
-    #     dest: "{{ runner_base_path }}/actions-runner-linux-x64.tar.gz"
-    #     owner: "{{ ansible_user }}"
-    #     mode: '0644'
+    - name: Download the latest runner package
+      ansible.builtin.get_url:
+        url: https://github.com/actions/runner/releases/download/v2.316.0/actions-runner-linux-x64-2.316.0.tar.gz # Check for latest version
+        dest: "{{ runner_base_path }}/actions-runner-linux-x64.tar.gz"
+        owner: "{{ ansible_user }}"
+        mode: '0644'
 
-    # - name: Extract the runner package
-    #   ansible.builtin.unarchive:
-    #     src: "{{ runner_base_path }}/actions-runner-linux-x64.tar.gz"
-    #     dest: "{{ runner_base_path }}"
-    #     owner: "{{ ansible_user }}"
-    #     remote_src: true
+    - name: Extract the runner package
+      ansible.builtin.unarchive:
+        src: "{{ runner_base_path }}/actions-runner-linux-x64.tar.gz"
+        dest: "{{ runner_base_path }}"
+        owner: "{{ ansible_user }}"
+        remote_src: true
 
-    # # ----------------------------------------
-    # # Task 6 & 7: Get Token and Configure
-    # # ----------------------------------------
-    # - name: Get GitHub Organization Runner Registration Token
-    #   ansible.builtin.uri:
-    #     url: "{{ REPO_URL | regex_replace('https://github.com/([^/]+)/.*', 'https://api.github.com/orgs/\\1') }}/actions/runners/registration-token"
-    #     method: POST
-    #     headers:
-    #       Authorization: "Bearer {{ GITHUB_TOKEN }}"
-    #       Accept: "application/vnd.github+json"
-    #       X-GitHub-Api-Version: "2022-11-28"
-    #     status_code: 201
-    #     return_content: true
-    #   register: github_token_response
+    # ----------------------------------------
+    # Task 6 & 7: Get Token and Configure
+    # ----------------------------------------
+    - name: Get GitHub Organization Runner Registration Token
+      ansible.builtin.uri:
+        url: "{{ REPO_URL | regex_replace('https://github.com/([^/]+)/.*', 'https://api.github.com/orgs/\\1') }}/actions/runners/registration-token"
+        method: POST
+        headers:
+          Authorization: "Bearer {{ GITHUB_TOKEN }}"
+          Accept: "application/vnd.github+json"
+          X-GitHub-Api-Version: "2022-11-28"
+        status_code: 201
+        return_content: true
+      register: github_token_response
 
-    # - name: Extract registration token
-    #   ansible.builtin.set_fact:
-    #     runner_token: "{{ github_token_response.json.token }}"
+    - name: Extract registration token
+      ansible.builtin.set_fact:
+        runner_token: "{{ github_token_response.json.token }}"
 
-    # - name: Configure the runner
-    #   become: true # Use root/ssm-user to execute sudo
-    #   ansible.builtin.shell: |
-    #     sudo -u ubuntu /bin/bash << EOF
-    #     cd "{{ runner_base_path }}"
-    #     ./config.sh \
-    #       --url "https://github.com/ashish-soni-org" \
-    #       --token {{ runner_token }} \
-    #       --runnergroup "Production_Runners"
-    #       self-hosted-runner-{{ inventory_hostname }}
-    #       linux,x64,aws,ec2
-    #       work_dir
-    #     EOF
-    #   args:
-    #     chdir: "{{ runner_base_path }}"
+    - name: Configure the runner
+      become: true # Use root/ssm-user to execute sudo
+      ansible.builtin.shell: |
+        sudo -u ubuntu /bin/bash << EOF
+        cd "{{ runner_base_path }}"
+        ./config.sh \
+          --url "https://github.com/ashish-soni-org" \
+          --token {{ runner_token }} \
+          --runnergroup "Production_Runners"
+          self-hosted-runner-{{ inventory_hostname }}
+          linux,x64,aws,ec2
+          work_dir
+        EOF
+      args:
+        chdir: "{{ runner_base_path }}"
 
     # ----------------------------------------
     # Task 8 & 9: Install and Start Service
