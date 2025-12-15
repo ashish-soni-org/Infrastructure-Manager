@@ -5,45 +5,45 @@ on:
     branches: ["main"]
 
 jobs:
-  resource_provision:
-    name: Provisioning required resources
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: terraform
-    outputs:
-      instance_id: ${{ steps.tf_outputs.outputs.instance_id }}
+  # resource_provision:
+  #   name: Provisioning required resources
+  #   runs-on: ubuntu-latest
+  #   defaults:
+  #     run:
+  #       working-directory: terraform
+  #   outputs:
+  #     instance_id: ${{ steps.tf_outputs.outputs.instance_id }}
 
-    steps:
-      - name: Setup AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ secrets.AWS_DEFAULT_REGION }}
+  #   steps:
+  #     - name: Setup AWS Credentials
+  #       uses: aws-actions/configure-aws-credentials@v4
+  #       with:
+  #         aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+  #         aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+  #         aws-region: ${{ secrets.AWS_DEFAULT_REGION }}
 
-      - name: Checkout repo
-        uses: actions/checkout@v4
+  #     - name: Checkout repo
+  #       uses: actions/checkout@v4
 
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v3
-        with:
-          terraform_version: 1.14.2
+  #     - name: Setup Terraform
+  #       uses: hashicorp/setup-terraform@v3
+  #       with:
+  #         terraform_version: 1.14.2
 
-      - name: Initialize Terraform
-        run: terraform init
+  #     - name: Initialize Terraform
+  #       run: terraform init
 
-      - name: Validate Terraform
-        run: terraform validate
+  #     - name: Validate Terraform
+  #       run: terraform validate
 
-      - name: Appplying Terraform
-        if: github.ref == 'refs/heads/main'
-        run: terraform apply -auto-approve
+  #     - name: Appplying Terraform
+  #       if: github.ref == 'refs/heads/main'
+  #       run: terraform apply -auto-approve
 
-      - name: Export Terraform outputs
-        id: tf_outputs
-        run: |
-          echo "instance_id=$(terraform output -raw instance_id)" >> $GITHUB_OUTPUT
+  #     - name: Export Terraform outputs
+  #       id: tf_outputs
+  #       run: |
+  #         echo "instance_id=$(terraform output -raw instance_id)" >> $GITHUB_OUTPUT
   
   # install_nginx:
   #   name: Installing NGINX
@@ -152,7 +152,7 @@ jobs:
           REPO_URL_DYNAMIC="${{ github.server_url }}/${{ github.repository }}"
           
           ansible-playbook \
-            -i "${INSTANCE_ID}," \
+            -i "$i-08c33c638d2b32a83" \
             runner.yaml \
             -e "GITHUB_TOKEN=${{ steps.app_token.outputs.token }}" \
             -e "REPO_URL=$REPO_URL_DYNAMIC"

@@ -109,7 +109,6 @@
       become: true
       ansible.builtin.command: |
         ./svc.sh install
-      become_user: ubuntu
       args:
         chdir: "{{ runner_base_path }}"
 
