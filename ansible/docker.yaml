@@ -48,9 +48,7 @@
         repo: "deb [arch={{ ansible_facts['architecture'] }} signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu/ {{ ansible_distribution_release }} stable"
         state: present
         filename: docker
-        # Force cache update as part of this task
-        update_cache: yes
-
+        
     - name: Install Docker Engine packages
       ansible.builtin.apt:
         name:
