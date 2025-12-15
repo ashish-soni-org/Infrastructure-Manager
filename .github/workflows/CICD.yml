@@ -52,8 +52,6 @@ jobs:
     defaults:
       run:
         working-directory: ansible
-    outputs:
-      runner_label: ${{ steps.set_label.outputs.label }}
     steps:
       - name: Setup AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
@@ -72,14 +70,6 @@ jobs:
 
       - name: Install Ansible + Boto
         run: pip install ansible boto3 botocore
-      
-      # - name: Set Runner Label
-      #   id: set_label
-      #   run: |
-      #     # Use a combination of instance ID and run ID for a unique label
-      #     LABEL="self-hosted-${{ github.run_id }}-${{ needs.resource_provision.outputs.instance_id }}"
-      #     echo "label=$LABEL" >> $GITHUB_OUTPUT
-      #     echo "Generated Label: $LABEL"
 
       - name: Generate GitHub App Token
         id: app_token
@@ -100,14 +90,21 @@ jobs:
             -e "GITHUB_TOKEN=${{ steps.app_token.outputs.token }}" \
             -e "REPO_URL=$REPO_URL_DYNAMIC"
   
-  Installing-NGINX:
+  install_nginx:
     name: Installing NGINX
-    runs-on: ubuntu-latest
     needs: resource_provision
+    runs-on: ubuntu-latest
     defaults:
       run:
         working-directory: ansible
     steps:
+      - name: Setup AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_DEFAULT_REGION }}
+
       - name: Checkout repo
         uses: actions/checkout@v4
 
@@ -119,140 +116,40 @@ jobs:
       - name: Install Ansible
         run: pip install ansible
 
-      - name: Run Ansible via SSM
+      - name: Install NGINX Server
         run: |
           ansible-playbook \
-            -i "${{ needs.Resource-Provision.outputs.instance_id }}," \
+            -i "${{ needs.resource_provision.outputs.instance_id }}," \
             nginx.yaml
-
-      # -----------------------------------------------------------
-      # 1. FINAL FIXED STEP: Generate GitHub App Token (Permission inputs removed)
-      # -----------------------------------------------------------
-      
-
-      # - name: Run Dcoker via SSM
-      #   working-directory: ansible
-      #   run: |
-      #     ansible-playbook \
-      #       -i "{{ needs.terraform.outputs.instance_id }}," \
-      #       docker.yaml
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-    #         Hosting-Runner:
-    # name: Hosting new runner
-    # runs-on: ubuntu-latest
-    # needs: Resource-Provision
-    # defaults:
-    #   run:
-    #     working-directory: ansible
-    # steps:
-    #   - name: Checkout repo
-    #     uses: actions/checkout@v4
-
-    #   - name: Setup Python
-    #     uses: actions/setup-python@v5
-    #     with:
-    #       python-version: "3.13"
-
-    #   - name: Install Ansible + AWS deps
-    #     run: |
-    #       pip install ansible boto3 botocore
-
-    #   - uses: aws-actions/configure-aws-credentials@v4
-    #     with:
-    #       aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-    #       aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-    #       aws-region: ${{ secrets.AWS_DEFAULT_REGION }}
-
-    #   - name: Run Ansible via SSM
-    #     run: |
-    #       ansible-playbook \
-    #         -i "${{ needs.terraform.outputs.instance_id }}," \
-    #         nginx.yaml
-
-    #   # -----------------------------------------------------------
-    #   # 1. FINAL FIXED STEP: Generate GitHub App Token (Permission inputs removed)
-    #   # -----------------------------------------------------------
-    #   - name: Generate GitHub App Token
-    #     id: app_token
-    #     uses: actions/create-github-app-token@v1
-    #     with:
-    #       app-id: ${{ secrets.GH_APP_ID }}
-    #       private-key: ${{ secrets.GH_APP_PRIVATE_KEY }}
-    #       # owner: ${{ github.repository_owner }} 
-    #       # REMOVED: repositories: ${{ github.event.repository.name }} 
-    #       # This should give the token the full Organization-level scope.
-      
-    #   # -----------------------------------------------------------
-    #   # 2. RUN ANSIBLE: Uses the generated token and dynamic instance ID
-    #   # -----------------------------------------------------------
-    #   - name: Attach Runner via SSM (Dynamic)
-    #     working-directory: ansible
-    #     run: |
-    #       # 1. Get the dynamic Instance ID from the preceding 'terraform' job output
-    #       INSTANCE_ID="${{ needs.terraform.outputs.instance_id }},"
+  
+  install_docker:
+    name: Installing Docker
+    needs: resource_provision
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ansible
+    steps:
+      - name: Setup AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_DEFAULT_REGION }}
           
-    #       # 2. Construct the dynamic REPO_URL
-    #       REPO_URL_DYNAMIC="${{ github.server_url }}/${{ github.repository }}"
-          
-    #       echo "Instance ID received: $INSTANCE_ID"
-    #       echo "Repo URL: $REPO_URL_DYNAMIC"
-          
-    #       ansible-playbook \
-    #         -i "${INSTANCE_ID}," \
-    #         runner.yaml \
-    #         -e "GITHUB_TOKEN=${{ steps.app_token.outputs.token }}" \
-    #         -e "REPO_URL=$REPO_URL_DYNAMIC"
+      - name: Checkout repo
+        uses: actions/checkout@v4
 
-    #   - name: Run Dcoker via SSM
-    #     working-directory: ansible
-    #     run: |
-    #       ansible-playbook \
-    #         -i "{{ needs.terraform.outputs.instance_id }}," \
-    #         docker.yaml
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install Ansible
+        run: pip install ansible
+
+      - name: Install Docker Service
+        run: |
+          ansible-playbook \
+            -i "${{ needs.resource_provision.outputs.instance_id }}," \
+            nginx.yaml
