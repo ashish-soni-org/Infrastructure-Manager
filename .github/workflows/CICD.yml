@@ -109,7 +109,7 @@ jobs:
         run: |
           ansible-playbook \
             -i "${{ needs.resource_provision.outputs.instance_id }}," \
-            nginx.yaml
+            docker.yaml
 
   hosting_runner:
     name: Hosting new runner
