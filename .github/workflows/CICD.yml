@@ -148,7 +148,7 @@ jobs:
       - name: Create and Attach Runner
         working-directory: ansible
         run: |
-          INSTANCE_ID="${{ needs.resource_provision.outputs.instance_id }},"
+          # INSTANCE_ID="${{ needs.resource_provision.outputs.instance_id }},"
           REPO_URL_DYNAMIC="${{ github.server_url }}/${{ github.repository }}"
           
           ansible-playbook \
