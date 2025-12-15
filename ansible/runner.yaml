@@ -58,6 +58,7 @@
         url: https://github.com/actions/runner/releases/download/v2.316.0/actions-runner-linux-x64-2.316.0.tar.gz # Check for latest version
         dest: "{{ runner_base_path }}/actions-runner-linux-x64.tar.gz"
         owner: "{{ ansible_user }}"
+        mode: '0644'
 
     - name: Extract the runner package
       ansible.builtin.unarchive:
@@ -71,9 +72,6 @@
     # ----------------------------------------
     - name: Get GitHub Organization Runner Registration Token
       ansible.builtin.uri:
-        # **CRITICAL CHANGE HERE**
-        # We replace the REPO endpoint with the ORG endpoint. 
-        # REPO_URL is still passed, but we only use the organization part.
         url: "{{ REPO_URL | regex_replace('https://github.com/([^/]+)/.*', 'https://api.github.com/orgs/\\1') }}/actions/runners/registration-token"
         method: POST
         headers:
@@ -111,6 +109,7 @@
       become: true
       ansible.builtin.command: |
         ./svc.sh install
+      become_user: ubuntu
       args:
         chdir: "{{ runner_base_path }}"
 
@@ -119,7 +118,6 @@
       ansible.builtin.systemd_service:
         name: actions.runner.ashish-soni-org.self-hosted-runner-{{ inventory_hostname }}.service
         daemon_reload: true
-        become_user: ubuntu
         enabled: true
         state: started
 
