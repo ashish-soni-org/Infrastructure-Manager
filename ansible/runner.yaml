@@ -106,9 +106,10 @@
     # Task 8 & 9: Install and Start Service
     # ----------------------------------------
     - name: Install and start the runner service
-      become: true
       ansible.builtin.shell: |
-        sudo -u ubuntu ./svc.sh install
+        sudo -u ubuntu /bin/bash << EOF
+        sudo ./svc.sh install
+        EOF
       args:
         chdir: "{{ runner_base_path }}"
 
