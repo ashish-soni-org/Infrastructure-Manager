@@ -51,7 +51,7 @@ jobs:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: ansible/nginx
+        working-directory: ansible
     steps:
       - name: Setup AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
@@ -76,7 +76,7 @@ jobs:
         run: |
           ansible-playbook \
             -i "${{ needs.resource_provision.outputs.instance_id }}," \
-            install_nginx.yaml
+            nginx.yaml
   
   install_docker:
     name: Installing Docker
@@ -84,7 +84,7 @@ jobs:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: ansible/docker
+        working-directory: ansible
     steps:
       - name: Setup AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
@@ -109,7 +109,7 @@ jobs:
         run: |
           ansible-playbook \
             -i "${{ needs.resource_provision.outputs.instance_id }}," \
-            install_docker.yaml
+            docker.yaml
 
   hosting_runner:
     name: Hosting new runner
@@ -117,7 +117,7 @@ jobs:
     needs: resource_provision
     defaults:
       run:
-        working-directory: ansible/self_hosted_runner
+        working-directory: ansible
     steps:
       - name: Setup AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
@@ -150,7 +150,7 @@ jobs:
         run: |
           ansible-playbook \
             -i "${{ needs.resource_provision.outputs.instance_id }}," \
-            host_runner.yaml \
+            runner.yaml \
             -e "GITHUB_TOKEN=${{ steps.app_token.outputs.token }}" \
             -e "REPO_URL=${{ github.server_url }}/${{ github.repository }}"
             
