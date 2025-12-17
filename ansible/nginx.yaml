@@ -40,4 +40,4 @@
       ansible.builtin.shell: 
         cmd: "./main.sh '{{ Test_Variable_Value }}' '{{ Test_Array_Value }}''"
       args:
-        chdir: /home/ubuntu/ 
+        chdir: /home/ubuntu/
