@@ -7,4 +7,4 @@ cat <<EOF > $CONFIG_FILE
 server {
     server_name $DOMAIN;
 }
-EOF
+EOF 

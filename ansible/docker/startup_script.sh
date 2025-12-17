@@ -54,6 +54,6 @@ docker login --username $USERNAME --password-stdin $ECR >> \$LOG_FILE 2>&1
 #stop & remove old containers, pull new images and run them
 $COMMAND
 
-EOF
+EOF 
 
-sudo chown root "$STARTUP_FILE_NAME" && sudo chmod 744 "$STARTUP_FILE_NAME" && sudo ./"$STARTUP_FILE_NAME"
+# sudo chown root "$STARTUP_FILE_NAME" && sudo chmod 744 "$STARTUP_FILE_NAME" && sudo ./"$STARTUP_FILE_NAME"
