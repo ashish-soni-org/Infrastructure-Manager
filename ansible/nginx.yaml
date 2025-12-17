@@ -20,10 +20,16 @@
         state: present
         update_cache: true
 
+    - name: Create working directory
+      ansible.builtin.file:
+        path: /home/ubuntu/nginx_config_creation_scripts
+        state: directory
+        mode: '0755'
+
     - name: Upload test script to server
       ansible.builtin.copy:
         src: "{{ item }}"
-        dest: /home/ubuntu/
+        dest: /home/ubuntu/nginx_config_creation_scripts
         mode: '0755'
       loop:
         - ./main.sh
