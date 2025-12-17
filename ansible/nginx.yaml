@@ -40,4 +40,4 @@
       ansible.builtin.shell: 
         cmd: "./main.sh '{{ DOMAIN }}' '{{ CONFIG_FILE }}' '{{ COMMENTS_ARRAY }}' '{{ LOCATIONS_ARRAY }}' '{{ IP }}' '{{ PORTS_ARRAY }}' '{{ PROXY_HEADERS }}'"
       args:
-        chdir: /home/ubuntu/
+        chdir: /home/ubuntu/ 
