@@ -26,18 +26,41 @@
     #     state: started
     #     enabled: true
 
-    - name: Upload test script to server
-      ansible.builtin.copy:
-        src: "{{ item }}"
-        dest: /home/ubuntu/
-        mode: '0755'
-      loop:
-        - ./main.sh
-        - ./basic_config.sh
-        - ./project_config.sh
+    - name: Verify Variable Format and Passing
+      ansible.builtin.shell:
+        # This script prints each argument on a new line with its index
+        cmd: |
+          echo "Internal Ansible Type: {{ Test_Array_Value | type_debug }}"
+          echo "---"
+          count=1
+          for arg in "$@"; do
+            echo "Argument $count: $arg"
+            ((count++))
+          done
+        # Pass the variables here
+        args:
+          - "{{ Test_Variable_Value }}"
+          - "{{ Test_Array_Value[0] }}"
+          - "{{ Test_Array_Value[1] }}"
+          - "{{ Test_Array_Value[2] }}"
+      register: debug_check
+
+    - name: Show Verification Results
+      ansible.builtin.debug:
+        var: debug_check.stdout_lines
+
+    # - name: Upload test script to server
+    #   ansible.builtin.copy:
+    #     src: "{{ item }}"
+    #     dest: /home/ubuntu/
+    #     mode: '0755'
+    #   loop:
+    #     - ./main.sh
+    #     - ./basic_config.sh
+    #     - ./project_config.sh
     
-    - name: Configre Nginx for Repositories
-      ansible.builtin.shell: 
-        cmd: "./main.sh '{{ Test_Variable_Value }}' {{ Test_Array_Value | map('quote') | join(' ') }}"
-      args:
-        chdir: /home/ubuntu/
+    # - name: Configre Nginx for Repositories
+    #   ansible.builtin.shell: 
+    #     cmd: "./main.sh '{{ Test_Variable_Value }}' {{ Test_Array_Value | map('quote') | join(' ') }}"
+    #   args:
+    #     chdir: /home/ubuntu/

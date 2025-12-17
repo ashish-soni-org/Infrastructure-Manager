@@ -6,11 +6,6 @@ CONFIG_FILE=$2
 ./basic_config.sh "$DOMAIN" "$CONFIG_FILE"
 
 
-
-
-
-
-
 # COMMENTS_ARRAY=
 # LOCATIONS_ARRAY=
 # REWRITES_ARRAY=

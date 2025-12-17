@@ -4,8 +4,10 @@
 CONFIG_FILE=$1
 DOMAIN=$2
 
-cat <<EOF > $CONFIG_FILE
-server {
-    server_name $DOMAIN;
-}
-EOF
+
+
+# cat <<EOF > $CONFIG_FILE
+# server {
+#     server_name $DOMAIN;
+# }
+# EOF
