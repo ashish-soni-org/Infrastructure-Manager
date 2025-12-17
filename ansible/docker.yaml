@@ -74,9 +74,7 @@
         dest: /home/ubuntu/docker_startup_creation_scripts
         mode: '0755'
       loop:
-        - docker/main.sh
-        - docker/basic_config.sh
-        - docker/project_config.sh
+        - docker/startup_script.sh
     
     - name: Configre Docker for Repositories
       ansible.builtin.shell: 
