@@ -5,48 +5,48 @@ on:
     branches: ["main"]
 
 jobs:
-  install_nginx:
-    name: Installing NGINX
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: ansible
-    steps:
-      - name: Setup AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ secrets.AWS_DEFAULT_REGION }}
+  # install_nginx:
+  #   name: Installing NGINX
+  #   runs-on: ubuntu-latest
+  #   defaults:
+  #     run:
+  #       working-directory: ansible
+  #   steps:
+  #     - name: Setup AWS Credentials
+  #       uses: aws-actions/configure-aws-credentials@v4
+  #       with:
+  #         aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+  #         aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+  #         aws-region: ${{ secrets.AWS_DEFAULT_REGION }}
 
-      - name: Checkout repo
-        uses: actions/checkout@v4
+  #     - name: Checkout repo
+  #       uses: actions/checkout@v4
 
-      - name: Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-          check-latest: true
+  #     - name: Setup Python
+  #       uses: actions/setup-python@v5
+  #       with:
+  #         python-version: "3.12"
+  #         check-latest: true
 
-      - name: Install Ansible + Boto
-        run: pip install ansible boto3 botocore
+  #     - name: Install Ansible + Boto
+  #       run: pip install ansible boto3 botocore
 
-      - name: Create Vault Password File
-        run: |
-          echo "${{ secrets.VAULT_PASSWORD }}" > .vault_pass
-          chmod 600 .vault_pass
+  #     - name: Create Vault Password File
+  #       run: |
+  #         echo "${{ secrets.VAULT_PASSWORD }}" > .vault_pass
+  #         chmod 600 .vault_pass
 
-      - name: Install NGINX Server
-        run: |
-          ansible-playbook \
-            -i "i-0a32feb8e3057c038," \
-            nginx.yaml --vault-password-file .vault_pass
-        env:
-          ANSIBLE_HOST_KEY_CHECKING: "False"
+  #     - name: Install NGINX Server
+  #       run: |
+  #         ansible-playbook \
+  #           -i "i-0a32feb8e3057c038," \
+  #           nginx.yaml --vault-password-file .vault_pass
+  #       env:
+  #         ANSIBLE_HOST_KEY_CHECKING: "False"
 
-      - name: Clean Password File
-        if: always()
-        run: rm -f .vault_pass
+  #     - name: Clean Password File
+  #       if: always()
+        # run: rm -f .vault_pass
   
   install_docker:
     name: Installing Docker

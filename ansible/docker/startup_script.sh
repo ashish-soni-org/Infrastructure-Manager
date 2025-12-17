@@ -22,6 +22,25 @@ LOG_FILE="$FILE_PATH/$LOG_FILE_NAME"
 STARTUP_FILE="$FILE_PATH/$STARTUP_FILE_NAME"
 COMMAND=""
 
+echo 
+echo 
+echo 
+echo 
+echo 
+echo 
+echo 
+echo 
+echo 
+echo 
+echo 
+echo 
+echo 
+echo 
+echo 
+echo 
+echo 
+echo 
+
 # commands to stop & remove old containers, pull new images and run them
 for i in "${!MAPPED_PORTS[@]}"; do
 
