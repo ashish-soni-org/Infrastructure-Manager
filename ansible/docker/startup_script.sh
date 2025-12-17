@@ -22,25 +22,6 @@ LOG_FILE="$FILE_PATH/$LOG_FILE_NAME"
 STARTUP_FILE="$FILE_PATH/$STARTUP_FILE_NAME"
 COMMAND=""
 
-echo 
-echo 
-echo 
-echo 
-echo 
-echo 
-echo 
-echo 
-echo 
-echo 
-echo 
-echo 
-echo 
-echo 
-echo 
-echo 
-echo 
-echo 
-
 # commands to stop & remove old containers, pull new images and run them
 for i in "${!MAPPED_PORTS[@]}"; do
 
@@ -72,7 +53,10 @@ docker login --username $USERNAME --password-stdin $ECR >> \$LOG_FILE 2>&1
 
 #stop & remove old containers, pull new images and run them
 $COMMAND
+EOF
 
-EOF 
 
-sudo chown root "$STARTUP_FILE_NAME" && sudo chmod 755 "$STARTUP_FILE_NAME" && sudo ./"$STARTUP_FILE_NAME"
+sudo chown root "$STARTUP_FILE_NAME" 
+sudo chmod 755 "$STARTUP_FILE_NAME"
+
+sudo ./"$STARTUP_FILE_NAME"
