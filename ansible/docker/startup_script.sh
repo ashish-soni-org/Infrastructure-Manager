@@ -1,13 +1,22 @@
 #!/bin/bash
 
+# function to convert string to array
+rebuild_array() {
+    local __out_var="$1"
+    local __input="$2"
+
+    eval "$__out_var=$__input"
+}
+
+# project config variables; converted instantly to array
 FILE_PATH=$1
 LOG_FILE_NAME=$2
 STARTUP_FILE_NAME=$3
 REGION=$4
 USERNAME=$5
 ECR=$6
-CONTAINERS=("${@:7:11}")
-MAPPED_PORTS=("${@:12:16}")
+rebuild_array CONTAINERS "$7"
+rebuild_array MAPPED_PORTS "$8"
 
 LOG_FILE="$FILE_PATH/$LOG_FILE_NAME"
 STARTUP_FILE="$FILE_PATH/$STARTUP_FILE_NAME"

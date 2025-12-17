@@ -3,7 +3,7 @@
   gather_facts: false
   become: true
   vars_files:
-    - vars/secrets.yml
+    - nginx/vars/secrets.yml
 
   vars:
     ansible_connection: aws_ssm

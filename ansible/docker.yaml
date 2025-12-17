@@ -2,7 +2,7 @@
   hosts: all
   become: true
   vars_files:
-    - vars/secrets.yml
+    - nginx/vars/secrets.yml
 
   vars:
     ansible_connection: aws_ssm
@@ -68,19 +68,19 @@
         state: directory
         mode: '0755'
 
-    - name: Upload test script to server
+    - name: Upload docker script to server
       ansible.builtin.copy:
         src: "{{ item }}"
         dest: /home/ubuntu/docker_startup_creation_scripts
         mode: '0755'
       loop:
-        - ./main.sh
-        - ./basic_config.sh
-        - ./project_config.sh
+        - docker/main.sh
+        - docker/basic_config.sh
+        - docker/project_config.sh
     
-    - name: Configre Nginx for Repositories
+    - name: Configre Docker for Repositories
       ansible.builtin.shell: 
-        # cmd: "./main.sh '{{ DOMAIN }}' '{{ CONFIG_FILE }}' '{{ COMMENTS_ARRAY }}' '{{ LOCATIONS_ARRAY }}' '{{ REWRITES_ARRAY }}' '{{ IP }}' '{{ PORTS_ARRAY }}' '{{ PROXY_HEADERS }}'"
+        cmd: "./startup_script.sh '{{ FILE_PATH }}' '{{ LOG_FILE_NAME }}' '{{ STARTUP_FILE_NAME }}' '{{ REGION }}' '{{ USERNAME }}' '{{ ECR }}' '{{ CONTAINERS }}' '{{ MAPPED_PORTS }}'"
       args:
         chdir: /home/ubuntu/docker_startup_creation_scripts
 
