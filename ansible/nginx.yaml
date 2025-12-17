@@ -33,11 +33,11 @@
         mode: '0755'
       loop:
         - ./main.sh
-        # - ./basic_config.sh
-        # - ./project_config.sh
+        - ./basic_config.sh
+        - ./project_config.sh
     
     - name: Configre Nginx for Repositories
       ansible.builtin.shell: 
-        cmd: "./main.sh '{{ Test_Variable_Value }}' '{{ Test_Array_Value }}'"
+        cmd: "./main.sh '{{ DOMAIN }}' '{{ CONFIG_FILE }}' '{{ COMMENTS_ARRAY }}' '{{ LOCATIONS_ARRAY }}' '{{ REWRITES_ARRAY }}' '{{ IP }}' '{{ PORTS_ARRAY }}' '{{ PROXY_HEADERS }}'"
       args:
         chdir: /home/ubuntu/
