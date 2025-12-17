@@ -7,14 +7,6 @@ REWRITE=$4
 PROXY_PASS=$5
 PROXY_HEADERS=("${@:6}")
 
-
-# echo CONFIG_FILE: $CONFIG_FILE > logs2
-echo COMMENT: $COMMENT >> logs2
-# echo LOCATION: $LOCATION >> logs2
-# echo REWRITE: $REWRITE >> logs2
-# echo PROXY_PASS: $PROXY_PASS >> logs2
-# echo PROXY_HEADERS: $PROXY_HEADERS >> logs2
-
 # create proxy header lines
 PROXY_SET_HEADERS=""
 

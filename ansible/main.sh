@@ -6,26 +6,23 @@ CONFIG_FILE=$2
 
 ./basic_config.sh "$DOMAIN" "$CONFIG_FILE"
 
-# # project config variables
-COMMENTS_ARRAY_STRING=$3
-LOCATIONS_ARRAY=$4
-REWRITES_ARRAY=$5
+============================================================================
+
+# function to convert string to array
+rebuild_array() {
+    local __out_var="$1"
+    local __input="$2"
+
+    eval "$__out_var=$__input"
+}
+
+# project config variables; converted instantly to array
+rebuild_array COMMENTS_ARRAY "$3"
+rebuild_array LOCATIONS_ARRAY "$4"
+rebuild_array REWRITES_ARRAY "$5"
 IP=$6
-PORTS_ARRAY=$7
+rebuild_array PORTS_ARRAY "$7"
 PROXY_HEADERS=$8
-
-# COMMENTS_ARRAY=$3
-# LOCATIONS_ARRAY=$4
-# REWRITES_ARRAY=$5
-# IP=$6
-# PORTS_ARRAY=$7
-# PROXY_HEADERS=$8
-
-mapfile -t MY_ARRAY < <(grep -oP '"\K[^"]+' <<< "$COMMENTS_ARRAY_STRING")
-
-# read COMMENTS_ARRAY <<< "$CLEAN_DATA"
-
-echo COMMENTS_ARRAY: $COMMENTS_ARRAY > logs2
 
 SIZE=${#COMMENTS_ARRAY[@]}
 

@@ -14,17 +14,17 @@
     - name: Wait for connection
       ansible.builtin.wait_for_connection:
 
-    # - name: Install nginx
-    #   ansible.builtin.apt:
-    #     name: nginx
-    #     state: present
-    #     update_cache: true
+    - name: Install nginx
+      ansible.builtin.apt:
+        name: nginx
+        state: present
+        update_cache: true
 
-    # - name: Starting Nginx service
-    #   ansible.builtin.service:
-    #     name: nginx
-    #     state: started
-    #     enabled: true
+    - name: Starting Nginx service
+      ansible.builtin.service:
+        name: nginx
+        state: started
+        enabled: true
 
     - name: Upload test script to server
       ansible.builtin.copy:

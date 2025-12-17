@@ -209,3 +209,4 @@ __marimo__/
 
 # Extras
 terraform/.terraform
+ansible/.vault-pass-main
