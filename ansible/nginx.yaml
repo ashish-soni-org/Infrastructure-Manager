@@ -39,5 +39,5 @@
     - name: Configre Nginx for Repositories
       ansible.builtin.shell: 
         cmd: "./main.sh '{{ Test_Variable_Value }}' '{{ Test_Array_Value }}''"
-      args:
+      args: 
         chdir: /home/ubuntu/
