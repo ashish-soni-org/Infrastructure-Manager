@@ -1,7 +1,7 @@
 #!/bin/bash
 
 DOMAIN=$1
-CONFIG_FILE=$2
+CONFIG_FILE=("${@:2}")
 
 echo $DOMAIN > logs
 echo $CONFIG_FILE >> logs
