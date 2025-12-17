@@ -1,0 +1,33 @@
+
+  install_nginx:
+    name: Installing NGINX
+    needs: resource_provision
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ansible
+    steps:
+      - name: Setup AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_DEFAULT_REGION }}
+
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          check-latest: true
+
+      - name: Install Ansible + Boto
+        run: pip install ansible boto3 botocore
+
+      - name: Install NGINX Server
+        run: |
+          ansible-playbook \
+            -i "${{ needs.resource_provision.outputs.instance_id }}," \
+            nginx.yaml

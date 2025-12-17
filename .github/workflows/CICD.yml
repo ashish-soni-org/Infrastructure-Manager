@@ -72,11 +72,22 @@ jobs:
       - name: Install Ansible + Boto
         run: pip install ansible boto3 botocore
 
+      - name: Create Vault Password File
+        run: |
+          echo "${{ secrets.VAULT_PASSWORD }}" > .vault_pass
+          chmod 600 .vault_pass
+
       - name: Install NGINX Server
         run: |
           ansible-playbook \
             -i "${{ needs.resource_provision.outputs.instance_id }}," \
-            nginx.yaml
+            nginx.yaml --vault-password-file .vault_pass
+        env:
+          ANSIBLE_HOST_KEY_CHECKING: "False"
+
+      - name: Clean Password File
+        if: always()
+        run: rm -f .vault_pass
   
   install_docker:
     name: Installing Docker
@@ -105,11 +116,22 @@ jobs:
       - name: Install Ansible + Boto
         run: pip install ansible boto3 botocore
 
+      - name: Create Vault Password File
+        run: |
+          echo "${{ secrets.VAULT_PASSWORD }}" > .vault_pass
+          chmod 600 .vault_pass
+
       - name: Install Docker Service
         run: |
           ansible-playbook \
             -i "${{ needs.resource_provision.outputs.instance_id }}," \
-            docker.yaml
+            docker.yaml --vault-password-file .vault_pass
+        env:
+          ANSIBLE_HOST_KEY_CHECKING: "False"
+
+      - name: Clean Password File
+        if: always()
+        run: rm -f .vault_pass
 
   hosting_runner:
     name: Hosting new runner
