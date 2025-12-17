@@ -265,7 +265,7 @@ jobs:
             -e "REPO_URL=${{ github.server_url }}/${{ github.repository }}"
             
   deploy_website_and_projects:
-    needs: hosting_runner
+    needs: [hosting_runner, configure_nginx, configure_docker]
     runs-on: ubuntu-latest
     steps:
       - name: Generate GitHub App token
