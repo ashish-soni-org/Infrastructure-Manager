@@ -68,13 +68,21 @@
         state: directory
         mode: '0755'
 
-    - name: Upload docker script to server
+    - name: Upload docker script file to server
       ansible.builtin.copy:
         src: "{{ item }}"
         dest: /home/ubuntu/docker_startup_creation_scripts
         mode: '0755'
       loop:
         - docker/startup_script.sh
+
+    - name: Upload docker service file to server
+      ansible.builtin.copy:
+        src: "{{ item }}"
+        dest: /home/ubuntu/docker_startup_creation_scripts
+        mode: '0755'
+      loop:
+        - docker/startup.service
     
     - name: Configre Docker for Repositories
       ansible.builtin.shell: 

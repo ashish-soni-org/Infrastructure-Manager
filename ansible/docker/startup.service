@@ -1,0 +1,14 @@
+[Unit]
+Description=Run ECR container startup script
+After=docker.service
+Requires=docker.service
+
+[Service]
+ExecStart=/home/ubuntu/docker_startup_creation_scripts/startup.sh
+User=ubuntu
+Group=ubuntu
+Type=oneshot
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target
