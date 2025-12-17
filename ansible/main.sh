@@ -22,7 +22,7 @@ rebuild_array LOCATIONS_ARRAY "$4"
 rebuild_array REWRITES_ARRAY "$5"
 IP=$6
 rebuild_array PORTS_ARRAY "$7"
-PROXY_HEADERS=$8
+rebuild_array PROXY_HEADERS "$8"
 
 SIZE=${#COMMENTS_ARRAY[@]}
 
