@@ -27,6 +27,5 @@
     #     enabled: true
     
     - name: Configre Nginx for Repositories
-      ansible.builtin.debug:
-        msg: "Testing variable {{ Test_Variable_Value }}; Testing array {{ Test_Array_Value }}"
-
+      ansible.builtin.shell: 
+        cmd: "./test.sh '{{ Test_Variable_Value }}' {{ Test_Array_Value | map('quote') | join(' ') }}"
