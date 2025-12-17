@@ -25,7 +25,15 @@
     #     name: nginx
     #     state: started
     #     enabled: true
+
+    - name: Upload test script to server
+      ansible.builtin.copy:
+        src: ./test.sh
+        dest: /home/ubuntu/
+        mode: '0755'
     
     - name: Configre Nginx for Repositories
       ansible.builtin.shell: 
         cmd: "./test.sh '{{ Test_Variable_Value }}' {{ Test_Array_Value | map('quote') | join(' ') }}"
+      args:
+        chdir: /home/ubuntu/
