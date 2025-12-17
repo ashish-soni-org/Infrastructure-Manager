@@ -21,9 +21,9 @@ PROXY_HEADERS=$8
 # PORTS_ARRAY=$7
 # PROXY_HEADERS=$8
 
-CLEAN_DATA=$(echo "$COMMENTS_ARRAY_STRING" | sed 's/[()"]//g')
+mapfile -t MY_ARRAY < <(grep -oP '"\K[^"]+' <<< "$COMMENTS_ARRAY_STRING")
 
-read COMMENTS_ARRAY <<< "$CLEAN_DATA"
+# read COMMENTS_ARRAY <<< "$CLEAN_DATA"
 
 echo COMMENTS_ARRAY: $COMMENTS_ARRAY > logs2
 
