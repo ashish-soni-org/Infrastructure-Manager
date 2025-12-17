@@ -28,9 +28,13 @@
 
     - name: Upload test script to server
       ansible.builtin.copy:
-        src: ./main.sh
+        src: "{{ item }}"
         dest: /home/ubuntu/
         mode: '0755'
+      loop:
+        - ./main.sh
+        - ./basic_config.sh
+        - ./project_config.sh
     
     - name: Configre Nginx for Repositories
       ansible.builtin.shell: 
