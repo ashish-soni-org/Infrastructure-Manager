@@ -32,9 +32,9 @@
         dest: /home/ubuntu/nginx_config_creation_scripts
         mode: '0755'
       loop:
-        - ./main.sh
-        - ./basic_config.sh
-        - ./project_config.sh
+        - /nginx/main.sh
+        - /nginx/basic_config.sh
+        - /nginx/project_config.sh
     
     - name: Configre Nginx for Repositories
       ansible.builtin.shell: 

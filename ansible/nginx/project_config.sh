@@ -15,7 +15,7 @@ SIZE=${#PROXY_HEADERS[@]}
 for i in "${!PROXY_HEADERS[@]}"; do
 
     header="${PROXY_HEADERS[$i]}"
-    PROXY_SET_HEADERS+=$'\t\t'
+    PROXY_SET_HEADERS+=$'\t'
     PROXY_SET_HEADERS+="proxy_set_header $header;"
 
     # if it's not last value in array, add required spaces
