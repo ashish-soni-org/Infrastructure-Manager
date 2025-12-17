@@ -83,11 +83,30 @@
     #     mode: '0755'
     #   loop:
     #     - docker/startup.service
-    - name: Install AWS CLI
+    - name: Install unzip
       ansible.builtin.apt:
-        name: awscli
+        name: unzip
         state: present
         update_cache: true
+
+    - name: Download AWS CLI installer
+      ansible.builtin.get_url:
+        url: https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip
+        dest: /tmp/awscliv2.zip
+        mode: '0644'
+
+    - name: Extract AWS CLI installer
+      ansible.builtin.unarchive:
+        src: /tmp/awscliv2.zip
+        dest: /tmp/
+        remote_src: true
+
+    - name: Run AWS CLI installer
+      ansible.builtin.shell:
+        cmd: sudo ./aws/install --update
+        chdir: /tmp/
+      register: aws_install_result
+      changed_when: "'You can now run: /usr/local/bin/aws' in aws_install_result.stdout"
     
     - name: Configre Docker for Repositories
       ansible.builtin.shell: 
