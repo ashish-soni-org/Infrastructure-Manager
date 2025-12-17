@@ -62,71 +62,12 @@
         state: present
         update_cache: true
 
-    - name: Create working directory
-      ansible.builtin.file:
-        path: /home/ubuntu/docker_startup_creation_scripts
-        state: directory
-        mode: '0755'
-
-    - name: Upload docker script file to server
-      ansible.builtin.copy:
-        src: "{{ item }}"
-        dest: /home/ubuntu/docker_startup_creation_scripts
-        mode: '0755'
-      loop:
-        - docker/startup_script.sh
-
-    - name: Upload docker service file to server
-      ansible.builtin.copy:
-        src: "{{ item }}"
-        dest: /etc/systemd/system
-        mode: '0755'
-      loop:
-        - docker/startup.service
-
-    - name: Install unzip
-      ansible.builtin.apt:
-        name: unzip
-        state: present
-        update_cache: true
-
-    - name: Download AWS CLI installer
-      ansible.builtin.get_url:
-        url: https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip
-        dest: /tmp/awscliv2.zip
-        mode: '0644'
-
-    - name: Extract AWS CLI installer
-      ansible.builtin.unarchive:
-        src: /tmp/awscliv2.zip
-        dest: /tmp/
-        remote_src: true
-
-    - name: Run AWS CLI installer
-      ansible.builtin.shell:
-        cmd: sudo ./aws/install --update
-        chdir: /tmp/
-      register: aws_install_result
-      changed_when: "'You can now run: /usr/local/bin/aws' in aws_install_result.stdout"
-    
-    - name: Configre Docker for Repositories
-      ansible.builtin.shell: 
-        cmd: "./startup_script.sh '{{ FILE_PATH }}' '{{ LOG_FILE_NAME }}' '{{ STARTUP_FILE_NAME }}' '{{ REGION }}' '{{ USERNAME }}' '{{ ECR }}' '{{ CONTAINERS }}' '{{ MAPPED_PORTS }}'"
-      args:
-        chdir: /home/ubuntu/docker_startup_creation_scripts
-
     - name: Ensure Docker service is running and enabled
       ansible.builtin.systemd:
         name: docker
         state: started
-        enabled: true
-
-    - name: Enable and start startup service
-      ansible.builtin.systemd:
-        name: startup.service
-        enabled: true
         daemon_reload: true
-        state: started
+        enabled: true
 
     - name: Ensure docker group exists
       ansible.builtin.group:
