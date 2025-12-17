@@ -35,7 +35,7 @@ if [[ -n "$REWRITE" ]]; then
 fi
 
 NEW_MAPPING_BLOCK+="
-        proxy_pass $PROXY_PASS;
+proxy_pass $PROXY_PASS;
 $PROXY_SET_HEADERS
     }"
 
