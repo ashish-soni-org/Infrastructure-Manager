@@ -3,8 +3,8 @@
 DOMAIN=$1
 CONFIG_FILE=$2
 
-${DOMAIN}
-${CONFIG_FILE}
+echo $DOMAIN > logs
+echo $CONFIG_FILE >> logs
 
 # ./basic_config.sh "$DOMAIN" "$CONFIG_FILE"
 
