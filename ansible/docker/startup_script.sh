@@ -75,4 +75,4 @@ $COMMAND
 
 EOF 
 
-# sudo chown root "$STARTUP_FILE_NAME" && sudo chmod 744 "$STARTUP_FILE_NAME" && sudo ./"$STARTUP_FILE_NAME"
+sudo chown root "$STARTUP_FILE_NAME" && sudo chmod 744 "$STARTUP_FILE_NAME" && sudo ./"$STARTUP_FILE_NAME"
