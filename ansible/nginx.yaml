@@ -26,19 +26,14 @@
     #     state: started
     #     enabled: true
 
-    - name: Verify Variable Format and Passing
-      ansible.builtin.shell: |
-        echo "Internal Ansible Type: {{ Test_Array_Value | type_debug }}"
-        echo "---"
-        echo "Argument 1 (Variable): {{ Test_Variable_Value }}"
-        echo "Argument 2 (Array Index 0): {{ Test_Array_Value[0] }}"
-        echo "Argument 3 (Array Index 1): {{ Test_Array_Value[1] }}"
-        echo "Argument 4 (Array Index 2): {{ Test_Array_Value[2] }}"
-      register: debug_check
-
-    - name: Show Verification Results
-      ansible.builtin.debug:
-        var: debug_check.stdout_lines
+    - name: Configre Nginx for Repositories
+      ansible.builtin.shell: 
+        # We use 'from_yaml' to fix the string format issue automatically
+        cmd: "./main.sh '{{ Test_Variable_Value }}' {{ (Test_Array_Value | from_yaml) | map('quote') | join(' ') }}"
+      args:
+        chdir: /home/ubuntu/
+      # Only run this if we actually have the list
+      when: Test_Array_Value is defined
 
     # - name: Upload test script to server
     #   ansible.builtin.copy:
