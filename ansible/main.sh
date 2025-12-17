@@ -3,8 +3,8 @@
 DOMAIN=$1
 CONFIG_FILE=$2
 
-$DOMAIN
-$CONFIG_FILE
+${DOMAIN}
+${CONFIG_FILE}
 
 # ./basic_config.sh "$DOMAIN" "$CONFIG_FILE"
 
