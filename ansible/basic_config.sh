@@ -4,7 +4,9 @@
 CONFIG_FILE=$1
 DOMAIN=$2
 
+$CONFIG_FILE
 
+$DOMAIN
 
 # cat <<EOF > $CONFIG_FILE
 # server {
