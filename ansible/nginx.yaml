@@ -38,6 +38,6 @@
     
     - name: Configre Nginx for Repositories
       ansible.builtin.shell: 
-        cmd: "./main.sh '{{ DOMAIN }}' '{{ CONFIG_FILE }}' '{{ COMMENTS_ARRAY }}' '{{ LOCATIONS_ARRAY }}' '{{ REWRITES_ARRAY }}' '{{ IP }}' '{{ PORTS_ARRAY }}' '{{ PROXY_HEADERS }}'"
+        cmd: "./main.sh '{{ DOMAIN }}' '{{ CONFIG_FILE }}'"
       args:
         chdir: /home/ubuntu/
