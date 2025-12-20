@@ -115,19 +115,23 @@ jobs:
           python-version: "3.12"
           check-latest: true
 
-      - name: Install Ansible + Boto
-        run: pip install ansible boto3 botocore
+      - name: Install Ansible, Boto3 and Hostinger Collection
+        run: |
+          pip install ansible boto3 botocore
+          ansible-galaxy collection install hostinger.vps
 
       - name: Create Vault Password File
         run: |
           echo "${{ secrets.VAULT_PASSWORD }}" > .vault_pass
           chmod 600 .vault_pass
 
-      - name: mapdomain
+      - name: Run Map Domain Playbook
         run: |
           ansible-playbook \
             -i "${{ needs.resource_provision.outputs.instance_ip }}," \
-            domainmap.yaml --vault-password-file .vault_pass
+            domainmap.yaml \
+            --vault-password-file .vault_pass \
+            --extra-vars "instance_ip=${{ needs.resource_provision.outputs.instance_ip }}"
         env:
           ANSIBLE_HOST_KEY_CHECKING: "False"
 
