@@ -109,8 +109,6 @@ jobs:
       - name: Install Ansible, Dependencies and Hostinger Collection
         run: |
           pip install ansible boto3 botocore requests
-          # Install using a clean, absolute-path structure for the runner
-          ansible-galaxy collection install hostinger.vps -p ./collections
 
       - name: Create Vault Password File
         run: |

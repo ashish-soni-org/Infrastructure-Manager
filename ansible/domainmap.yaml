@@ -17,16 +17,16 @@
       ansible.builtin.wait_for_connection:
         timeout: 300
 
-    - name: Update Hostinger DNS A record
-      hostinger.vps.hostinger_dns_record:
-        token: "{{ HOSTINGER_API_TOKEN }}"
-        zone: "{{ DOMAIN_NAME }}"
-        type: "A"
-        name: "@"
-        value: "{{ instance_ip }}"
-        state: present
-      delegate_to: localhost
-      become: false
+    # - name: Update Hostinger DNS A record
+    #   hostinger.vps.hostinger_dns_record:
+    #     token: "{{ HOSTINGER_API_TOKEN }}"
+    #     zone: "{{ DOMAIN_NAME }}"
+    #     type: "A"
+    #     name: "@"
+    #     value: "{{ instance_ip }}"
+    #     state: present
+    #   delegate_to: localhost
+    #   become: false
 
     - name: Create Nginx configuration file
       ansible.builtin.copy:
