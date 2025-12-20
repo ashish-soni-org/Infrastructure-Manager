@@ -1,7 +1,9 @@
-- name: Configure Nginx Domain Mapping
+---
+- name: Configure Nginx and Map Hostinger Domain
   hosts: all
   gather_facts: false
   become: true
+  
   vars_files:
     - nginx/vars/secrets.yml
 
@@ -11,10 +13,11 @@
     ansible_aws_ssm_region: ap-south-1
 
   tasks:
-    - name: Wait for connection
+    - name: Wait for connection to EC2
       ansible.builtin.wait_for_connection:
+        timeout: 300
 
-    - name: Update A record to point to EC2
+    - name: Update Hostinger DNS A record
       hostinger.vps.hostinger_dns_record:
         token: "{{ HOSTINGER_API_TOKEN }}"
         zone: "{{ DOMAIN_NAME }}"
@@ -22,9 +25,11 @@
         name: "@"
         value: "{{ instance_ip }}"
         state: present
+      delegate_to: localhost
+      become: false
 
     - name: Create Nginx configuration file
-      copy:
+      ansible.builtin.copy:
         dest: "/etc/nginx/sites-available/{{ DOMAIN_NAME }}"
         content: |
           server {
@@ -37,17 +42,18 @@
                   try_files $uri $uri/ =404;
               }
           }
+        mode: '0644'
 
     - name: Enable the site by creating a symbolic link
-      file:
+      ansible.builtin.file:
         src: "/etc/nginx/sites-available/{{ DOMAIN_NAME }}"
         dest: "/etc/nginx/sites-enabled/{{ DOMAIN_NAME }}"
         state: link
 
-    - name: Remove default Nginx config if it exists
-      file:
+    - name: Remove default Nginx config
+      ansible.builtin.file:
         path: /etc/nginx/sites-enabled/default
         state: absent
 
     - name: Test and Reload Nginx
-      shell: nginx -t && systemctl reload nginx
+      ansible.builtin.shell: nginx -t && systemctl reload nginx
