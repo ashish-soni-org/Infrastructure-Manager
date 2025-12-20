@@ -109,7 +109,7 @@ jobs:
       - name: Install Ansible, Dependencies and Hostinger Collection
         run: |
           pip install ansible boto3 botocore requests
-          # Install to a specific local directory within the runner to avoid path confusion
+          # Install using a clean, absolute-path structure for the runner
           ansible-galaxy collection install hostinger.vps -p ./collections
 
       - name: Create Vault Password File
@@ -126,8 +126,8 @@ jobs:
             --extra-vars "instance_ip=3.109.242.107"
         env:
           ANSIBLE_HOST_KEY_CHECKING: "False"
-          # Ensure Ansible looks into the custom folder we installed the collection in
-          ANSIBLE_COLLECTIONS_PATH: "./collections"
+          # FIXED: Pointing to the specific directory where the collection was just installed
+          ANSIBLE_COLLECTIONS_PATH: "${{ github.workspace }}/ansible/collections"
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           AWS_DEFAULT_REGION: ${{ secrets.AWS_DEFAULT_REGION }}
