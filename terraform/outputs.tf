@@ -13,9 +13,9 @@ output "instance_id" {
 #   value = aws_instance.Production_server.id
 # }
 
-# output "elastic_ip" {
-#   value = aws_eip.Production_elastic_ip.public_ip
-# }
+output "elastic_ip" {
+  value = aws_eip.Production_elastic_ip.public_ip
+}
 
 # output "instance_type" {
 #   value = aws_instance.Production_server.instance_type

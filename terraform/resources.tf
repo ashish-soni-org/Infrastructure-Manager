@@ -22,10 +22,10 @@ resource "aws_instance" "Production_server" {
 # }
 
 
-# resource "aws_eip" "Production_elastic_ip" {
-#   domain = "vpc"
-#   instance = aws_instance.Production_server.id
-# }
+resource "aws_eip" "Production_elastic_ip" {
+  domain = "vpc"
+  instance = aws_instance.Production_server.id
+}
 
 # resource "random_id" "rand_id" {
 #   byte_length = 8
