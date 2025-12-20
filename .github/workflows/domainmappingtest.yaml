@@ -5,94 +5,95 @@ on:
     branches: ["main"]
 
 jobs:
-  # resource_provision:
-  #   name: Provisioning required resources
-  #   runs-on: ubuntu-latest
-  #   defaults:
-  #     run:
-  #       working-directory: terraform
-  #   outputs:
-  #     instance_id: ${{ steps.tf_outputs.outputs.instance_id }}
-  #     instance_ip: ${{ steps.tf_outputs.outputs.elastic_ip }}
+  resource_provision:
+    name: Provisioning required resources
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: terraform
+    outputs:
+      instance_id: ${{ steps.tf_outputs.outputs.instance_id }}
+      instance_ip: ${{ steps.tf_outputs.outputs.elastic_ip }}
 
-  #   steps:
-  #     - name: Setup AWS Credentials
-  #       uses: aws-actions/configure-aws-credentials@v4
-  #       with:
-  #         aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-  #         aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-  #         aws-region: ${{ secrets.AWS_DEFAULT_REGION }}
+    steps:
+      - name: Setup AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_DEFAULT_REGION }}
 
-  #     - name: Checkout repo
-  #       uses: actions/checkout@v4
+      - name: Checkout repo
+        uses: actions/checkout@v4
 
-  #     - name: Setup Terraform
-  #       uses: hashicorp/setup-terraform@v3
-  #       with:
-  #         terraform_version: 1.14.2
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.14.2
 
-  #     - name: Initialize Terraform
-  #       run: terraform init
+      - name: Initialize Terraform
+        run: terraform init
 
-  #     - name: Validate Terraform
-  #       run: terraform validate
+      - name: Validate Terraform
+        run: terraform validate
 
-  #     - name: Appplying Terraform
-  #       if: github.ref == 'refs/heads/main'
-  #       run: terraform apply -auto-approve
+      - name: Appplying Terraform
+        if: github.ref == 'refs/heads/main'
+        run: terraform apply -auto-approve
 
-  #     - name: Export Terraform outputs
-  #       id: tf_outputs
-  #       run: |
-  #         echo "instance_id=$(terraform output -raw instance_id)" >> $GITHUB_OUTPUT
-  #         echo "instance_ip=$(terraform output -raw elastic_ip)" >> $GITHUB_OUTPUT
+      - name: Export Terraform outputs
+        id: tf_outputs
+        run: |
+          echo "instance_id=$(terraform output -raw instance_id)" >> $GITHUB_OUTPUT
+          echo "instance_ip=$(terraform output -raw elastic_ip)" >> $GITHUB_OUTPUT
   
-  # install_nginx:
-  #   name: Installing NGINX
-  #   needs: resource_provision
-  #   runs-on: ubuntu-latest
-  #   defaults:
-  #     run:
-  #       working-directory: ansible
-  #   steps:
-  #     - name: Setup AWS Credentials
-  #       uses: aws-actions/configure-aws-credentials@v4
-  #       with:
-  #         aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-  #         aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-  #         aws-region: ${{ secrets.AWS_DEFAULT_REGION }}
+  install_nginx:
+    name: Installing NGINX
+    needs: resource_provision
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ansible
+    steps:
+      - name: Setup AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_DEFAULT_REGION }}
 
-  #     - name: Checkout repo
-  #       uses: actions/checkout@v4
+      - name: Checkout repo
+        uses: actions/checkout@v4
 
-  #     - name: Setup Python
-  #       uses: actions/setup-python@v5
-  #       with:
-  #         python-version: "3.12"
-  #         check-latest: true
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          check-latest: true
 
-  #     - name: Install Ansible + Boto
-  #       run: pip install ansible boto3 botocore
+      - name: Install Ansible + Boto
+        run: pip install ansible boto3 botocore
 
-  #     - name: Create Vault Password File
-  #       run: |
-  #         echo "${{ secrets.VAULT_PASSWORD }}" > .vault_pass
-  #         chmod 600 .vault_pass
+      - name: Create Vault Password File
+        run: |
+          echo "${{ secrets.VAULT_PASSWORD }}" > .vault_pass
+          chmod 600 .vault_pass
 
-  #     - name: Install NGINX Server
-  #       run: |
-  #         ansible-playbook \
-  #           -i "${{ needs.resource_provision.outputs.instance_id }}," \
-  #           nginx.yaml --vault-password-file .vault_pass
-  #       env:
-  #         ANSIBLE_HOST_KEY_CHECKING: "False"
+      - name: Install NGINX Server
+        run: |
+          ansible-playbook \
+            -i "${{ needs.resource_provision.outputs.instance_id }}," \
+            nginx.yaml
+        env:
+          ANSIBLE_HOST_KEY_CHECKING: "False"
 
-  #     - name: Clean Password File
-  #       if: always()
-  #       run: rm -f .vault_pass
+      - name: Clean Password File
+        if: always()
+        run: rm -f .vault_pass
   
   mapdomain:
     name: Map Domain
+    needs: [resource_provision, install_nginx]
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -106,9 +107,8 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Install Ansible, Dependencies and Hostinger Collection
-        run: |
-          pip install ansible boto3 botocore requests
+      - name: Install Ansible + Boto
+        run: pip install ansible boto3 botocore
 
       - name: Create Vault Password File
         run: |
@@ -118,17 +118,11 @@ jobs:
       - name: Run Map Domain Playbook
         run: |
           ansible-playbook \
-            -i "i-03b4ecf66342a0eea," \
+            -i "${{ needs.resource_provision.outputs.instance_id }}," \
             domainmap.yaml \
-            --vault-password-file .vault_pass \
-            --extra-vars "instance_ip=3.109.242.107"
+            --vault-password-file .vault_pass
         env:
           ANSIBLE_HOST_KEY_CHECKING: "False"
-          # FIXED: Pointing to the specific directory where the collection was just installed
-          ANSIBLE_COLLECTIONS_PATH: "${{ github.workspace }}/ansible/collections"
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          AWS_DEFAULT_REGION: ${{ secrets.AWS_DEFAULT_REGION }}
 
       - name: Clean Password File
         if: always()

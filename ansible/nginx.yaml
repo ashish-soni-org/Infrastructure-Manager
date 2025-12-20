@@ -2,8 +2,6 @@
   hosts: all
   gather_facts: false
   become: true
-  vars_files:
-    - nginx/vars/secrets.yml
 
   vars:
     ansible_connection: aws_ssm

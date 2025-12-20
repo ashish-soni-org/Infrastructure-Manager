@@ -1,4 +1,3 @@
----
 - name: Configure Nginx with SSL (Let's Encrypt)
   hosts: all
   gather_facts: false
@@ -15,16 +14,6 @@
   tasks:
     - name: Wait for connection to EC2
       ansible.builtin.wait_for_connection:
-        timeout: 300
-
-    - name: Install Nginx and Certbot
-      ansible.builtin.apt:
-        name:
-          - nginx
-          - certbot
-          - python3-certbot-nginx
-        state: present
-        update_cache: yes
 
     # -------------------------------
     # HTTP config (needed for certbot)
