@@ -4,6 +4,10 @@ on:
   push:
     branches: ["main"]
 
+# Define variables/flags at the workflow level
+env:
+  ENABLE_MAP_DNS: "true" # Set to "false" to skip map_dns and run install_nginx immediately
+
 jobs:
   resource_provision:
     name: Provisioning required resources
@@ -47,11 +51,15 @@ jobs:
           echo "instance_id=$(terraform output -raw instance_id)" >> $GITHUB_OUTPUT
           echo "instance_ip=$(terraform output -raw elastic_ip)" >> $GITHUB_OUTPUT
   
-  
   map_dns:
     name: Mapping DNS
     needs: resource_provision
+    if: env.ENABLE_MAP_DNS == 'true'
     runs-on: ubuntu-latest
+    # Concurrency ensures install_nginx waits if this job is running
+    concurrency:
+      group: nginx_sequence
+      cancel-in-progress: false
     defaults:
       run:
         working-directory: ansible
@@ -97,6 +105,10 @@ jobs:
     name: Installing NGINX
     needs: resource_provision
     runs-on: ubuntu-latest
+    # Use the same concurrency group as map_dns
+    concurrency:
+      group: nginx_sequence
+      cancel-in-progress: false
     defaults:
       run:
         working-directory: ansible
@@ -139,6 +151,8 @@ jobs:
   
   mapdomain:
     name: Map Domain
+    # If map_dns is skipped, we only wait for install_nginx
+    # If map_dns is active, we wait for both
     needs: [resource_provision, install_nginx]
     runs-on: ubuntu-latest
     defaults:
