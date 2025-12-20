@@ -14,11 +14,14 @@
     - name: Wait for connection
       ansible.builtin.wait_for_connection:
 
-    - name: Install nginx
+    - name: Install Nginx and Certbot
       ansible.builtin.apt:
-        name: nginx
+        name:
+          - nginx
+          - certbot
+          - python3-certbot-nginx
         state: present
-        update_cache: true
+        update_cache: yes
 
     - name: Starting Nginx service
       ansible.builtin.service:

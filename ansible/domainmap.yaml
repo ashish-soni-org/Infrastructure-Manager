@@ -1,9 +1,9 @@
 ---
-- name: Configure Nginx and Map Hostinger Domain
+- name: Configure Nginx with SSL (Let's Encrypt)
   hosts: all
   gather_facts: false
   become: true
-  
+
   vars_files:
     - nginx/vars/secrets.yml
 
@@ -17,18 +17,19 @@
       ansible.builtin.wait_for_connection:
         timeout: 300
 
-    # - name: Update Hostinger DNS A record
-    #   hostinger.vps.hostinger_dns_record:
-    #     token: "{{ HOSTINGER_API_TOKEN }}"
-    #     zone: "{{ DOMAIN_NAME }}"
-    #     type: "A"
-    #     name: "@"
-    #     value: "{{ instance_ip }}"
-    #     state: present
-    #   delegate_to: localhost
-    #   become: false
+    - name: Install Nginx and Certbot
+      ansible.builtin.apt:
+        name:
+          - nginx
+          - certbot
+          - python3-certbot-nginx
+        state: present
+        update_cache: yes
 
-    - name: Create Nginx configuration file
+    # -------------------------------
+    # HTTP config (needed for certbot)
+    # -------------------------------
+    - name: Create initial Nginx HTTP config
       ansible.builtin.copy:
         dest: "/etc/nginx/sites-available/{{ DOMAIN_NAME }}"
         content: |
@@ -39,21 +40,67 @@
               location / {
                   root /var/www/html;
                   index index.html index.htm;
-                  try_files $uri $uri/ =404;
               }
           }
         mode: '0644'
 
-    - name: Enable the site by creating a symbolic link
+    - name: Enable the site
       ansible.builtin.file:
         src: "/etc/nginx/sites-available/{{ DOMAIN_NAME }}"
         dest: "/etc/nginx/sites-enabled/{{ DOMAIN_NAME }}"
         state: link
+        force: yes
 
     - name: Remove default Nginx config
       ansible.builtin.file:
         path: /etc/nginx/sites-enabled/default
         state: absent
+
+    - name: Reload Nginx
+      ansible.builtin.service:
+        name: nginx
+        state: reloaded
+
+    # -------------------------------
+    # Obtain SSL Certificate
+    # -------------------------------
+    - name: Obtain SSL certificate using Certbot
+      ansible.builtin.command: >
+        certbot --nginx
+        --non-interactive
+        --agree-tos
+        --email {{ CERTBOT_EMAIL }}
+        -d {{ DOMAIN_NAME }}
+        -d www.{{ DOMAIN_NAME }}
+      args:
+        creates: "/etc/letsencrypt/live/{{ DOMAIN_NAME }}/fullchain.pem"
+
+    # -------------------------------
+    # Force HTTPS redirect
+    # -------------------------------
+    - name: Update Nginx config with HTTPS + redirect
+      ansible.builtin.copy:
+        dest: "/etc/nginx/sites-available/{{ DOMAIN_NAME }}"
+        content: |
+          server {
+              listen 80;
+              server_name {{ DOMAIN_NAME }} www.{{ DOMAIN_NAME }};
+              return 301 https://$host$request_uri;
+          }
+
+          server {
+              listen 443 ssl;
+              server_name {{ DOMAIN_NAME }} www.{{ DOMAIN_NAME }};
+
+              ssl_certificate /etc/letsencrypt/live/{{ DOMAIN_NAME }}/fullchain.pem;
+              ssl_certificate_key /etc/letsencrypt/live/{{ DOMAIN_NAME }}/privkey.pem;
+
+              location / {
+                  root /var/www/html;
+                  index index.html index.htm;
+              }
+          }
+        mode: '0644'
 
     - name: Test and Reload Nginx
       ansible.builtin.shell: nginx -t && systemctl reload nginx
