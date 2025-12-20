@@ -93,7 +93,6 @@ jobs:
   
   mapdomain:
     name: Map Domain
-    needs: [resource_provision, install_nginx]
     runs-on: ubuntu-latest
     defaults:
       run:
