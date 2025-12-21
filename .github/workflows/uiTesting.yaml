@@ -41,21 +41,20 @@ jobs:
       - name: Terraform Plan
         run: terraform plan
 
-      - name: Terraform Apply
-        run: terraform apply -auto-approve
-
-      - name: Generate Ansible Inventory
+      - name: Terraform Action (Apply or Destroy)
+        # Use the tf_action from the UI payload, default to 'apply' if not sent
         run: |
-          # Extract the Public IPs from Terraform Output
-          # Assumes you have an 'output "instance_ips" { value = [...] }' in your main.tf
-        #   echo "[orchestrated_nodes]" > inventory.ini
-        #   terraform output -json instance_ips | jq -r '.[]' >> inventory.ini
+          ACTION="${{ github.event.client_payload.tf_action }}"
+          if [ "$ACTION" == "destroy" ]; then
+            terraform destroy -auto-approve
+          else
+            terraform apply -auto-approve
+          fi
 
       - name: Identify Requested Services
+        if: github.event.client_payload.tf_action != 'destroy'
         id: service_check
         run: |
-          # This logic scans the manifest for specific service names across all instances
-          # and sets boolean flags for the workflow steps
           DOCKER_REQ=$(jq '[.ui_manifest[].subnets[].resources[] | select(.type=="EC2").instances[].services[] | select(. == "Docker")] | length > 0' terraform.tfvars.json)
           NGINX_REQ=$(jq '[.ui_manifest[].subnets[].resources[] | select(.type=="EC2").instances[].services[] | select(. == "NGINX")] | length > 0' terraform.tfvars.json)
           MINIKUBE_REQ=$(jq '[.ui_manifest[].subnets[].resources[] | select(.type=="EC2").instances[].services[] | select(. == "MiniKube")] | length > 0' terraform.tfvars.json)
@@ -64,22 +63,15 @@ jobs:
           echo "run_nginx=$NGINX_REQ" >> $GITHUB_OUTPUT
           echo "run_minikube=$MINIKUBE_REQ" >> $GITHUB_OUTPUT
 
-      # --- Service Playbook Executions ---
-
+      # Playbooks only run during 'apply'
       - name: Run Docker Installation
-        if: steps.service_check.outputs.run_docker == 'true'
+        if: github.event.client_payload.tf_action != 'destroy' && steps.service_check.outputs.run_docker == 'true'
         run: echo "Running docker installation"
-        env:
-          ANSIBLE_HOST_KEY_CHECKING: "False"
 
       - name: Run Nginx Installation
-        if: steps.service_check.outputs.run_nginx == 'true'
+        if: github.event.client_payload.tf_action != 'destroy' && steps.service_check.outputs.run_nginx == 'true'
         run: echo "Running nginx installation"
-        env:
-          ANSIBLE_HOST_KEY_CHECKING: "False"
 
       - name: Run MiniKube Installation
-        if: steps.service_check.outputs.run_minikube == 'true'
+        if: github.event.client_payload.tf_action != 'destroy' && steps.service_check.outputs.run_minikube == 'true'
         run: echo "Running minikube installation"
-        env:
-          ANSIBLE_HOST_KEY_CHECKING: "False"

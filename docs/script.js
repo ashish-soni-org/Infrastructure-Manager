@@ -1,10 +1,5 @@
 "use strict";
 
-/**
- * Professional Cloud Resource Provisioning Interface
- * Version: 3.2.2
- * Architecture: Decoupled UI & CI/CD Orchestration
- */
 (function () {
     const MIN = 1;
     const MAX = 5;
@@ -17,7 +12,8 @@
             subnets: [createDefaultSubnet("main-subnet")]
         }],
         token: "",
-        isProvisioning: false
+        isProvisioning: false,
+        isDestroying: false
     };
 
     /* Theme Engine */
@@ -37,7 +33,6 @@
         applyTheme(next);
     };
 
-    /* Manifest Generation Logic */
     function generateManifest() {
         return state.vpcs.map(vpc => ({
             vpc_name: vpc.name,
@@ -59,7 +54,6 @@
         }));
     }
 
-    /* Manifest Viewer Logic */
     const manifestViewer = document.getElementById("manifestViewer");
     const copyBtn = document.getElementById("copyManifestBtn");
 
@@ -75,7 +69,6 @@
         setTimeout(() => copyBtn.textContent = original, 2000);
     };
 
-    /* Rendering Engine */
     const vpcContainer = document.getElementById("vpcContainer");
     const footerContainer = document.getElementById("footerContainer");
     const vpcCounterValue = document.getElementById("vpcCounterValue");
@@ -227,26 +220,34 @@
         const icon = document.createElement("span");
         icon.className = "token-icon";
         icon.textContent = "🔑";
-        labelGroup.append(icon, createLabel("GitHub PAT Token:"));
+        labelGroup.append(icon, createLabel("PAT Token:"));
 
         const inputGroup = document.createElement("div");
         inputGroup.className = "token-input-field";
         const input = document.createElement("input");
         input.className = "input";
         input.type = "password";
-        input.placeholder = "Enter PAT (classic or fine-grained)";
+        input.placeholder = "Enter GitHub PAT";
         input.value = state.token;
         input.oninput = e => { state.token = e.target.value; updateManifest(); };
         inputGroup.appendChild(input);
 
-        const btnText = state.isProvisioning ? "Dispatching..." : "Trigger GitHub Action";
-        const subBtn = createButton(btnText, "btn-submit", state.isProvisioning, () => executeGitHubDispatch(generateManifest()));
+        // Provision Button
+        const provBtnText = state.isProvisioning ? "Provisioning..." : "Provision";
+        const provBtn = createButton(provBtnText, "btn-submit", state.isProvisioning || state.isDestroying, () => executeGitHubDispatch(generateManifest(), "apply"));
 
-        card.append(labelGroup, inputGroup, subBtn);
+        // Destroy Button
+        const destBtnText = state.isDestroying ? "Destroying..." : "Destroy All";
+        const destBtn = createButton(destBtnText, "btn-destroy", state.isProvisioning || state.isDestroying, () => {
+            if(confirm("CRITICAL: This will destroy all resources in this state. Continue?")) {
+                executeGitHubDispatch(generateManifest(), "destroy");
+            }
+        });
+
+        card.append(labelGroup, inputGroup, destBtn, provBtn);
         footerContainer.appendChild(card);
     }
 
-    /* Shared Factories */
     function createLabel(text) {
         const el = document.createElement("span");
         el.className = "label";
@@ -306,12 +307,12 @@
         EVENT_TYPE: "provision-infra-event"
     };
 
-    async function executeGitHubDispatch(manifest) {
-        if (!state.token.trim()) {
-            return alert("Error: GitHub Personal Access Token (PAT) is required.");
-        }
+    async function executeGitHubDispatch(manifest, action) {
+        if (!state.token.trim()) return alert("Error: GitHub PAT is required.");
 
-        state.isProvisioning = true;
+        if (action === "apply") state.isProvisioning = true;
+        else state.isDestroying = true;
+        
         render();
 
         const API_URL = `https://api.github.com/repos/${GITHUB_CONFIG.OWNER}/${GITHUB_CONFIG.REPO}/dispatches`;
@@ -328,25 +329,22 @@
                     event_type: GITHUB_CONFIG.EVENT_TYPE,
                     client_payload: {
                         manifest: manifest,
-                        environment: "production",
+                        tf_action: action, // Passing 'apply' or 'destroy'
                         timestamp: new Date().toISOString()
                     }
                 })
             });
 
             if (response.status === 204) {
-                alert("Success: GitHub Action triggered! Check your 'Actions' tab.");
-            } else if (response.status === 401 || response.status === 403) {
-                throw new Error("Authentication Failed: Check PAT scopes and Org policies.");
+                alert(`Success: Terraform ${action.toUpperCase()} triggered!`);
             } else {
-                const errorData = await response.json();
-                throw new Error(errorData.message || "Unknown GitHub API error.");
+                throw new Error("GitHub API error.");
             }
         } catch (error) {
-            console.error("GitHub Dispatch Error:", error);
-            alert(`Provisioning Failed: ${error.message}`);
+            alert(`Failed: ${error.message}`);
         } finally {
             state.isProvisioning = false;
+            state.isDestroying = false;
             render();
         }
     }

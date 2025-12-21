@@ -305,3 +305,17 @@ body {
     .btn-submit { width: 100%; }
     .domain-inputs-container .label { flex: 0 0 100%; margin-bottom: 4px; }
 }
+
+/* Add this to your BUTTONS section in styles.css */
+.btn-destroy { 
+    background-color: var(--danger); 
+    color: #ffffff; 
+    padding: 12px 24px; 
+    font-size: 1rem; 
+    margin-right: 10px;
+}
+
+.btn-destroy:hover {
+    background-color: #b91c1c;
+    box-shadow: 0 0 15px rgba(239, 68, 68, 0.4);
+}
