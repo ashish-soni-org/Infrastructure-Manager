@@ -41,7 +41,6 @@ jobs:
             -backend-config="bucket=xyz-terraform-state-bucket" \
             -backend-config="key=projects/infra.tfstate" \
             -backend-config="region=${{ secrets.AWS_DEFAULT_REGION }}" \
-            -backend-config="dynamodb_table=terraform-state-lock" \
             -backend-config="encrypt=true"
 
       - name: Terraform Plan
