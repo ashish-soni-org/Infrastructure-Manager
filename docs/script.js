@@ -335,7 +335,7 @@
             });
 
             if (response.status === 204) {
-                alert("🚀 Success: GitHub Action triggered! Check your 'Actions' tab.");
+                alert("Success: GitHub Action triggered! Check your 'Actions' tab.");
             } else if (response.status === 401 || response.status === 403) {
                 throw new Error("Authentication Failed: Check PAT scopes and Org policies.");
             } else {
