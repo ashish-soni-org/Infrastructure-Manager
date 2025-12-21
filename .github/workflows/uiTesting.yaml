@@ -35,7 +35,7 @@ jobs:
           region         = ${{ secrets.AWS_DEFAULT_REGION }}
           dynamodb_table = "terraform-state-lock"
           encrypt        = true
-          EOF
+          EOF >> backend.conf
 
           # 2. Create the infrastructure variables file (as we did before)
           echo "{\"ui_manifest\": ${{ toJson(github.event.client_payload.manifest) }}}" > terraform.tfvars.json
