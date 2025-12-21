@@ -18,12 +18,36 @@ jobs:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ secrets.AWS_DEFAULT_REGION }}
-          
+
       - name: Checkout Code
         uses: actions/checkout@v4
 
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
+
+      - name: Create Backend and Variables Files
+        run: |
+          # 1. Create the backend configuration file
+          # We'll use 'xyz-terraform-state-bucket' or a value from your UI
+          cat <<EOF > backend.conf
+          bucket         = "daaa-r6e3a9"
+          key            = "orchestrator/terraform.tfstate"
+          region         = ${{ secrets.AWS_DEFAULT_REGION }}
+          dynamodb_table = "terraform-state-lock"
+          encrypt        = true
+          EOF
+
+          # 2. Create the infrastructure variables file (as we did before)
+          echo "{\"ui_manifest\": ${{ toJson(github.event.client_payload.manifest) }}}" > terraform.tfvars.json
+
+      - name: Terraform Init
+        run: terraform init -backend-config=backend.conf
+
+      - name: Terraform Plan
+        run: terraform plan
+
+      - name: Terraform Apply
+        run: terraform apply -auto-approve
 
       - name: Create Variables File
         run: |
