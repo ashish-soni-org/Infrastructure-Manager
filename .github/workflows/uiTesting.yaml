@@ -9,7 +9,7 @@ jobs:
     # Update this path to the folder containing your main.tf / variables.tf
     defaults:
       run:
-        working-directory: terraform  # Change this to 'Terraform-Ansible' if that's where your code is
+        working-directory: ./terraform  # Change this to 'Terraform-Ansible' if that's where your code is
 
     steps:
       - name: Checkout Code
