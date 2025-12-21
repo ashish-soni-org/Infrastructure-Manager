@@ -6,13 +6,11 @@ on:
 jobs:
   terraform-deploy:
     runs-on: ubuntu-latest
-    # Update this path to the folder containing your main.tf / variables.tf
     defaults:
       run:
         working-directory: ./terraform 
 
     env:
-      # Securely map your secrets to env vars
       AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
       AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
       AWS_REGION: ${{ secrets.AWS_DEFAULT_REGION }}
@@ -26,8 +24,6 @@ jobs:
 
       - name: Create Variables File
         run: |
-          # Use jq if available or a clean heredoc to prevent multi-line string errors
-          # This writes ONLY the manifest to the variables file
           cat <<EOF > terraform.tfvars.json
           {
             "ui_manifest": ${{ toJson(github.event.client_payload.manifest) }}
@@ -36,7 +32,6 @@ jobs:
 
       - name: Terraform Init
         run: |
-          # Direct injection avoids file corruption and "Variables not allowed" errors
           terraform init \
             -backend-config="bucket=daaa-r6e3a9" \
             -backend-config="key=projects/infra.tfstate" \
@@ -48,3 +43,43 @@ jobs:
 
       - name: Terraform Apply
         run: terraform apply -auto-approve
+
+      - name: Generate Ansible Inventory
+        run: |
+          # Extract the Public IPs from Terraform Output
+          # Assumes you have an 'output "instance_ips" { value = [...] }' in your main.tf
+          echo "[orchestrated_nodes]" > inventory.ini
+          terraform output -json instance_ips | jq -r '.[]' >> inventory.ini
+
+      - name: Identify Requested Services
+        id: service_check
+        run: |
+          # This logic scans the manifest for specific service names across all instances
+          # and sets boolean flags for the workflow steps
+          DOCKER_REQ=$(jq '[.ui_manifest[].subnets[].resources[] | select(.type=="EC2").instances[].services[] | select(. == "Docker")] | length > 0' terraform.tfvars.json)
+          NGINX_REQ=$(jq '[.ui_manifest[].subnets[].resources[] | select(.type=="EC2").instances[].services[] | select(. == "NGINX")] | length > 0' terraform.tfvars.json)
+          MINIKUBE_REQ=$(jq '[.ui_manifest[].subnets[].resources[] | select(.type=="EC2").instances[].services[] | select(. == "MiniKube")] | length > 0' terraform.tfvars.json)
+          
+          echo "run_docker=$DOCKER_REQ" >> $GITHUB_OUTPUT
+          echo "run_nginx=$NGINX_REQ" >> $GITHUB_OUTPUT
+          echo "run_minikube=$MINIKUBE_REQ" >> $GITHUB_OUTPUT
+
+      # --- Service Playbook Executions ---
+
+      - name: Run Docker Installation
+        if: steps.service_check.outputs.run_docker == 'true'
+        run: echo "Running docker installation"
+        env:
+          ANSIBLE_HOST_KEY_CHECKING: "False"
+
+      - name: Run Nginx Installation
+        if: steps.service_check.outputs.run_nginx == 'true'
+        run: echo "Running nginx installation"
+        env:
+          ANSIBLE_HOST_KEY_CHECKING: "False"
+
+      - name: Run MiniKube Installation
+        if: steps.service_check.outputs.run_minikube == 'true'
+        run: echo "Running minikube installation"
+        env:
+          ANSIBLE_HOST_KEY_CHECKING: "False"
