@@ -6,6 +6,11 @@ on:
 jobs:
   terraform-deploy:
     runs-on: ubuntu-latest
+    # Update this path to the folder containing your main.tf / variables.tf
+    defaults:
+      run:
+        working-directory: terraform  # Change this to 'Terraform-Ansible' if that's where your code is
+
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
@@ -15,16 +20,21 @@ jobs:
 
       - name: Create Variables File
         run: |
-          # Professional Tip: Convert the client_payload to a standard Terraform JSON var file
-          # This saves the entire UI manifest into a variable named 'ui_manifest'
+          # Capture the manifest from the AJAX payload
           echo '${{ toJson(github.event.client_payload.manifest) }}' > ui_data.json
+          
+          # Wrap it in the 'ui_manifest' key so Terraform variables can read it
           echo "{\"ui_manifest\": $(cat ui_data.json)}" > terraform.tfvars.json
+          
+          echo "Successfully created terraform.tfvars.json"
+          cat terraform.tfvars.json
 
       - name: Terraform Init
         run: terraform init
 
       - name: Terraform Plan
         run: terraform plan
-
+        
       - name: Terraform Apply
+        if: github.event.client_payload.environment == 'production'
         run: terraform apply -auto-approve
