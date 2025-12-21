@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Resource Provision - Professional Cloud Orchestrator</title>
+    <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+    <header class="page-header">
+        <h1 class="page-title">Resource Provision</h1>
+        <button id="themeToggleBtn" class="theme-toggle">☀️ Light</button>
+    </header>
+
+    <div class="counter-bar">
+        <span class="counter-label">VPC</span>
+        <span id="vpcCounterValue" class="counter-value">1</span>
+        <button id="vpcDecrementBtn" class="btn btn-decrement">−</button>
+        <button id="vpcIncrementBtn" class="btn btn-increment">+</button>
+        <button id="vpcResetBtn" class="btn btn-reset">Reset</button>
+    </div>
+
+    <main id="vpcContainer" class="cards-container"></main>
+
+    <section class="manifest-section">
+        <div class="manifest-header">
+            <span class="manifest-title">Live Provisioning Manifest</span>
+            <button id="copyManifestBtn" class="btn btn-copy">Copy JSON</button>
+        </div>
+        <pre id="manifestViewer" class="manifest-viewer"></pre>
+    </section>
+
+    <footer id="footerContainer" class="footer-container"></footer>
+
+    <script src="script.js" defer></script>
+</body>
+</html>
