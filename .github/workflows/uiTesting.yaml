@@ -38,7 +38,7 @@ jobs:
         run: |
           # Direct injection avoids file corruption and "Variables not allowed" errors
           terraform init \
-            -backend-config="bucket=xyz-terraform-state-bucket" \
+            -backend-config="bucket=daaa-r6e3a9" \
             -backend-config="key=projects/infra.tfstate" \
             -backend-config="region=${{ secrets.AWS_DEFAULT_REGION }}" \
             -backend-config="encrypt=true"
