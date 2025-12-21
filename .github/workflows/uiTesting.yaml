@@ -48,8 +48,8 @@ jobs:
         run: |
           # Extract the Public IPs from Terraform Output
           # Assumes you have an 'output "instance_ips" { value = [...] }' in your main.tf
-          echo "[orchestrated_nodes]" > inventory.ini
-          terraform output -json instance_ips | jq -r '.[]' >> inventory.ini
+        #   echo "[orchestrated_nodes]" > inventory.ini
+        #   terraform output -json instance_ips | jq -r '.[]' >> inventory.ini
 
       - name: Identify Requested Services
         id: service_check
