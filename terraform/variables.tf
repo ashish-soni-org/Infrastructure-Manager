@@ -38,3 +38,8 @@ variable "connection_type" {
   default = "aws_ssm"
   
 }
+
+variable "ui_manifest" {
+  type        = any
+  description = "Infrastructure manifest from the UI"
+}
