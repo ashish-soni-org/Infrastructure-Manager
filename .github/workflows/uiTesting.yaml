@@ -5,7 +5,7 @@ on:
 
 jobs:
   terraform-deploy:
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     # Update this path to the folder containing your main.tf / variables.tf
     defaults:
       run:
