@@ -2,7 +2,7 @@
 
 /**
  * Professional Cloud Resource Provisioning Interface
- * Version: 3.2.0
+ * Version: 3.2.2
  * Architecture: Decoupled UI & CI/CD Orchestration
  */
 (function () {
@@ -234,7 +234,7 @@
         const input = document.createElement("input");
         input.className = "input";
         input.type = "password";
-        input.placeholder = "ghp_xxxxxxxxxxxx";
+        input.placeholder = "Enter PAT (classic or fine-grained)";
         input.value = state.token;
         input.oninput = e => { state.token = e.target.value; updateManifest(); };
         inputGroup.appendChild(input);
@@ -300,21 +300,12 @@
        CI/CD ORCHESTRATION LOGIC (GITHUB ACTIONS AJAX)
        ========================================================================== */
 
-    /**
-     * @constant GITHUB_CONFIG
-     * Update OWNER and REPO to match your GitHub repository.
-     */
     const GITHUB_CONFIG = {
-        OWNER: "ashish-soni-org",
+        OWNER: "ashish-soni-org", 
         REPO: "Terraform-Ansible",
         EVENT_TYPE: "provision-infra-event"
     };
 
-    /**
-     * executeGitHubDispatch
-     * Professionals use the 'repository_dispatch' endpoint to trigger custom workflows.
-     * @param {Object} manifest - The current infrastructure state.
-     */
     async function executeGitHubDispatch(manifest) {
         if (!state.token.trim()) {
             return alert("Error: GitHub Personal Access Token (PAT) is required.");
@@ -344,7 +335,9 @@
             });
 
             if (response.status === 204) {
-                alert("Success: GitHub Action triggered! Check your 'Actions' tab.");
+                alert("🚀 Success: GitHub Action triggered! Check your 'Actions' tab.");
+            } else if (response.status === 401 || response.status === 403) {
+                throw new Error("Authentication Failed: Check PAT scopes and Org policies.");
             } else {
                 const errorData = await response.json();
                 throw new Error(errorData.message || "Unknown GitHub API error.");
