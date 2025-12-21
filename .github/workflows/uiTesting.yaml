@@ -69,3 +69,65 @@ jobs:
       - name: Terraform Apply
         if: github.event.client_payload.environment == 'production'
         run: terraform apply -auto-approve
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+name: Infrastructure Provisioning
+on:
+  repository_dispatch:
+    types: [provision-infra-event]
+
+jobs:
+  terraform-deploy:
+    runs-on: ubuntu-latest
+    env:
+      # Securely map your secrets to env vars
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      AWS_REGION: ${{ secrets.AWS_DEFAULT_REGION }}
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      - name: Create Variables File
+        run: |
+          # Use jq if available or a clean heredoc to prevent multi-line string errors
+          # This writes ONLY the manifest to the variables file
+          cat <<EOF > terraform.tfvars.json
+          {
+            "ui_manifest": ${{ toJson(github.event.client_payload.manifest) }}
+          }
+          EOF
+
+      - name: Terraform Init
+        run: |
+          # Direct injection avoids file corruption and "Variables not allowed" errors
+          terraform init \
+            -backend-config="bucket=xyz-terraform-state-bucket" \
+            -backend-config="key=projects/infra.tfstate" \
+            -backend-config="region=${{ secrets.AWS_DEFAULT_REGION }}" \
+            -backend-config="dynamodb_table=terraform-state-lock" \
+            -backend-config="encrypt=true"
+
+      - name: Terraform Plan
+        run: terraform plan
+
+      - name: Terraform Apply
+        run: terraform apply -auto-approve
