@@ -1,0 +1,28 @@
+name: Infrastructure Provisioning
+
+on:
+  repository_dispatch:
+    # This 'types' string must match GITHUB_CONFIG.EVENT_TYPE in script.js
+    types: [provision-infra-event]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Process Infrastructure Manifest
+        run: |
+          echo "Received Provisioning Request"
+          # Access the manifest sent from the UI via the client_payload
+          echo "Manifest Data: ${{ github.event.client_payload.manifest }}"
+          echo "Environment: ${{ github.event.client_payload.environment }}"
+          
+          # Professional Tip: Save the manifest to a JSON file for your Terraform/Ansible scripts
+          echo '${{ toJson(github.event.client_payload.manifest) }}' > manifest.json
+
+      - name: Execute Deployment
+        run: |
+          echo "Starting deployment based on manifest.json..."
+          # Add your Terraform, Pulumi, or CLI commands here
