@@ -57,7 +57,7 @@ resource "aws_instance" "EC2" {
 
   # Map to the specific subnet ID. 
   # This assumes your data source or resource for subnets is indexed by the subnet name.
-  subnet_id = aws_subnet.SUBNET["${each.value.vpc_name}-${each.value.subnet_name}"].id
+  # subnet_id = aws_subnet.SUBNET["${each.value.vpc_name}-${each.value.subnet_name}"].id
 
   tags = {
     Name = each.value.name
