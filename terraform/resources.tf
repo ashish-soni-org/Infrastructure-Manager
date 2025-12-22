@@ -31,7 +31,7 @@ resource "aws_instance" "EC2" {
 
   # Map to the specific subnet ID. 
   # This assumes your data source or resource for subnets is indexed by the subnet name.
-  subnet_id = data.aws_subnet.Production_Subnet.id
+  subnet_id = each.value.subnet_id
 
   tags = {
     Name = each.value.name
