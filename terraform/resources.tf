@@ -12,8 +12,14 @@ resource "aws_subnet" "SUBNET" {
 }
 
 resource "aws_eip" "ELASTIC_IP" {
-  domain = "vpc"
+  for_each = { for inst in local.ec2_instances : inst.key => inst }
+
+  domain   = "vpc"
   instance = aws_instance.EC2[each.key].id
+
+  tags = {
+    Name = "EIP-${each.value.name}"
+  }
 }
 
 resource "aws_instance" "EC2" {
@@ -31,7 +37,7 @@ resource "aws_instance" "EC2" {
 
   # Map to the specific subnet ID. 
   # This assumes your data source or resource for subnets is indexed by the subnet name.
-  subnet_id = each.value.subnet_id
+  subnet_id = aws_subnet.SUBNET["${each.value.vpc_name}-${each.value.subnet_name}"].id
 
   tags = {
     Name = each.value.name
@@ -42,7 +48,7 @@ resource "aws_instance" "EC2" {
 
 resource "aws_s3_bucket" "S3_BUCKET" {
   for_each = { for b in local.s3_buckets : b.key => b }
-  bucket   = each.value.name
+  bucket = "${each.value.name}-${random_string.suffix[each.key].result}"
 }
 
 resource "aws_ecr_repository" "ECR_REPO" {
@@ -65,7 +71,7 @@ resource "aws_ecr_repository" "ECR_REPO" {
 #   instance = aws_instance.Production_server.id
 # }
 
-# resource "random_id" "rand_id" {
+# resource "random_id" "RAND_ID" {
 #   byte_length = 8
 # }
 
