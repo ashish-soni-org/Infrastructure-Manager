@@ -14,13 +14,11 @@
   tasks:
     - name: Wait for connection
       ansible.builtin.wait_for_connection:
+        timeout: 300
 
-    - name: Install Nginx and Certbot
+    - name: Install Nginx
       ansible.builtin.apt:
-        name:
-          - nginx
-          - certbot
-          - python3-certbot-nginx
+        name: nginx
         state: present
         update_cache: yes
 
