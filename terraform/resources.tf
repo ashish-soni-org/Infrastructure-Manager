@@ -13,7 +13,7 @@ resource "aws_subnet" "SUBNET" {
 
 resource "aws_eip" "ELASTIC_IP" {
   domain = "vpc"
-  instance = aws_instance.EC2.id
+  instance = aws_instance.EC2[each.key].id
 }
 
 resource "aws_instance" "EC2" {
