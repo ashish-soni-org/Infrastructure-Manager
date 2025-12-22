@@ -1,7 +1,7 @@
 name: Infrastructure Provisioning
 on:
   repository_dispatch:
-    types: [provision-infra-event]
+    types: [event-provision-infra]
 
 jobs:
   terraform-deploy:

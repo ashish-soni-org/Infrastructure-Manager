@@ -63,6 +63,7 @@ resource "aws_instance" "EC2" {
     Name = each.value.name
     VPC    = each.value.vpc_name
     Subnet = each.value.subnet_name
+    Services = join(",", each.value.services)
   }
 }
 
