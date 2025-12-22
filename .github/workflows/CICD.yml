@@ -209,7 +209,7 @@ jobs:
       - name: Install Docker Service
         run: |
 
-          IDS=$(echo '${{ needs.resource_provision.outputs.service_inventory }}' | jq -r '.NGINX')
+          IDS=$(echo '${{ needs.resource_provision.outputs.service_inventory }}' | jq -r '.Docker')
           
           
           ansible-playbook \
@@ -305,7 +305,7 @@ jobs:
         working-directory: ansible
         run: |
 
-          IDS=$(echo '${{ needs.resource_provision.outputs.service_inventory }}' | jq -r '.NGINX')
+          IDS=$(echo '${{ needs.resource_provision.outputs.service_inventory }}' | jq -r '.Self-Hosted-Runner')
           
           
           ansible-playbook \
