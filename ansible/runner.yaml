@@ -1,31 +1,28 @@
 - name: Install and start runner on instance
   hosts: all
-  gather_facts: true
-  become: true # Keep global 'become: true' for the service tasks later
-  remote_user: ubuntu
+  gather_facts: false
+  become: true
+
+  vars_files:
+    - nginx/vars/secrets.yml
 
   vars:
-    ansible_connection: aws_ssm
-    ansible_aws_ssm_bucket_name: ansible-ssm-artifacts-ashish-123
-    ansible_aws_ssm_region: ap-south-1
-    runner_base_path: "/opt/actions-runner"
+    ansible_connection: "{{ ANSIBLE_CONNECTION }}"
+    ansible_aws_ssm_bucket_name: "{{ ANSIBLE_AWS_SSM_BUCKET_NAME }}"
+    ansible_aws_ssm_region: "{{ ANSIBLE_AWS_SSM_REGION }}"
+    runner_base_path: "/home/ubuntu/actions-runner"
 
   tasks:
     - name: Wait for connection
       ansible.builtin.wait_for_connection:
-
-    # ----------------------------------------
-    # Task 3: Install Dependencies (Requires root)
-    # ----------------------------------------
+        timeout: 300
+        
     - name: Install dependencies for runner
       ansible.builtin.apt:
         name: ['curl', 'jq', 'git']
         state: present
       when: ansible_os_family == "Debian"
 
-    # ----------------------------------------
-    # Task 4 & 5: Setup Runner Files
-    # ----------------------------------------
     - name: Create runner directory
       ansible.builtin.file:
         path: "{{ runner_base_path }}"
@@ -35,7 +32,7 @@
 
     - name: Download the latest runner package
       ansible.builtin.get_url:
-        url: https://github.com/actions/runner/releases/download/v2.316.0/actions-runner-linux-x64-2.316.0.tar.gz # Check for latest version
+        url: https://github.com/actions/runner/releases/download/v2.316.0/actions-runner-linux-x64-2.316.0.tar.gz 
         dest: "{{ runner_base_path }}/actions-runner-linux-x64.tar.gz"
         owner: "{{ ansible_user }}"
         mode: '0644'
@@ -47,9 +44,6 @@
         owner: "{{ ansible_user }}"
         remote_src: true
 
-    # ----------------------------------------
-    # Task 6 & 7: Get Token and Configure
-    # ----------------------------------------
     - name: Get GitHub Organization Runner Registration Token
       ansible.builtin.uri:
         url: "{{ REPO_URL | regex_replace('https://github.com/([^/]+)/.*', 'https://api.github.com/orgs/\\1') }}/actions/runners/registration-token"
@@ -67,7 +61,6 @@
         runner_token: "{{ github_token_response.json.token }}"
 
     - name: Configure the runner
-      become: true # Use root/ssm-user to execute sudo
       ansible.builtin.shell: |
         sudo -u ubuntu /bin/bash << EOF
         cd "{{ runner_base_path }}"
@@ -82,9 +75,6 @@
       args:
         chdir: "{{ runner_base_path }}"
 
-    # ----------------------------------------
-    # Task 8 & 9: Install and Start Service
-    # ----------------------------------------
     - name: Install and start the runner service
       ansible.builtin.shell: |
         sudo -u ubuntu /bin/bash << EOF
