@@ -3,10 +3,13 @@
   gather_facts: false
   become: true
 
+  vars_files:
+    - nginx/vars/secrets.yml
+
   vars:
-    ansible_connection: aws_ssm
-    ansible_aws_ssm_bucket_name: ansible-ssm-artifacts-ashish-123
-    ansible_aws_ssm_region: ap-south-1
+    ansible_connection: "{{ ANSIBLE_CONNECTION }}"
+    ansible_aws_ssm_bucket_name: "{{ ANSIBLE_AWS_SSM_BUCKET_NAME }}"
+    ansible_aws_ssm_region: "{{ ANSIBLE_AWS_SSM_REGION }}"
 
   tasks:
     - name: Wait for connection
