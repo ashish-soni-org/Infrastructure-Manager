@@ -4,14 +4,14 @@ resource "aws_vpc" "VPC" {
   tags       = { Name = each.value.name }
 }
 
-# 1. Create an Internet Gateway for each VPC
+# TODO: 1. Create an Internet Gateway for each VPC
 resource "aws_internet_gateway" "IGW" {
   for_each = local.vpcs
   vpc_id   = aws_vpc.VPC[each.key].id
   tags     = { Name = "${each.value.name}-igw" }
 }
 
-# 2. Create a Route Table that sends traffic (0.0.0.0/0) to the IGW
+# TODO:  2. Create a Route Table that sends traffic (0.0.0.0/0) to the IGW
 resource "aws_route_table" "RT" {
   for_each = local.vpcs
   vpc_id   = aws_vpc.VPC[each.key].id
@@ -68,7 +68,7 @@ resource "aws_instance" "EC2" {
 
 resource "aws_s3_bucket" "S3_BUCKET" {
   for_each = { for b in local.s3_buckets : b.key => b }
-  bucket = "${each.value.name}-${random_string.suffix[each.key].result}"
+  bucket = "${each.value.name}-${random_id.RAND_ID[each.key].hex}"
 }
 
 resource "aws_ecr_repository" "ECR_REPO" {
@@ -77,31 +77,18 @@ resource "aws_ecr_repository" "ECR_REPO" {
   image_scanning_configuration { scan_on_push = true }
 }
 
-# resource "local_file" "ansible_inventory" {
-#   filename = "../ansible/inventory.ini"
-#   content  = <<EOF
-#     [prod]
-#     ${aws_instance.Production_server.id} ansible_connection=${var.connection_type} ansible_aws_ssm_region=${var.region}
-#   EOF
-# }
-
-
-# resource "aws_eip" "ELASTIC_IP" {
-#   domain = "vpc"
-#   instance = aws_instance.Production_server.id
-# }
-
-# resource "random_id" "RAND_ID" {
-#   byte_length = 8
-# }
-
-# Helper to ensure unique bucket names
-resource "random_string" "suffix" {
+resource "random_id" "RAND_ID" {
   for_each = { for bucket in local.s3_buckets : bucket.key => bucket }
-  length   = 6
-  special  = false
-  upper    = false
+  byte_length = 8
 }
+
+# # Helper to ensure unique bucket names
+# resource "random_string" "suffix" {
+#   for_each = { for bucket in local.s3_buckets : bucket.key => bucket }
+#   length   = 6
+#   special  = false
+#   upper    = false
+# }
 
 # resource "aws_s3_bucket" "first_project_bucket" {
 #   bucket = "project-1-${random_id.rand_id.hex}"
