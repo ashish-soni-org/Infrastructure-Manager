@@ -24,7 +24,7 @@ jobs:
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ secrets.AWS_DEFAULT_REGION }}
+          aws-region: ${{ secrets.AWS_REGION_NAME }}
 
       - name: Checkout repo
         uses: actions/checkout@v4
@@ -47,7 +47,7 @@ jobs:
           terraform init \
             -backend-config="bucket=${{ secrets.AWS_TF_STATE_FILE_BUCKET }}" \
             -backend-config="key=${{ secrets.AWS_TF_STATE_FILE_PATH }}" \
-            -backend-config="region=${{ secrets.AWS_DEFAULT_REGION }}" \
+            -backend-config="region=${{ secrets.AWS_REGION_NAME }}" \
             -backend-config="encrypt=true"
 
       - name: Terraform Action (Apply or Destroy)
@@ -94,7 +94,7 @@ jobs:
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ secrets.AWS_DEFAULT_REGION }}
+          aws-region: ${{ secrets.AWS_REGION_NAME }}
 
       - name: Checkout repo
         uses: actions/checkout@v4
@@ -117,7 +117,7 @@ jobs:
       - name: Install NGINX Server
         run: |
 
-          export AWS_REGION=${{ secrets.AWS_DEFAULT_REGION }}
+          export AWS_REGION=${{ secrets.AWS_REGION_NAME }}
 
           ansible-playbook \
             -i inventory_aws_ec2.yml \
@@ -144,7 +144,7 @@ jobs:
   #       with:
   #         aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
   #         aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-  #         aws-region: ${{ secrets.AWS_DEFAULT_REGION }}
+  #         aws-region: ${{ secrets.AWS_REGION_NAME }}
 
   #     - name: Checkout repo
   #       uses: actions/checkout@v4
@@ -188,7 +188,7 @@ jobs:
   #       with:
   #         aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
   #         aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-  #         aws-region: ${{ secrets.AWS_DEFAULT_REGION }}
+  #         aws-region: ${{ secrets.AWS_REGION_NAME }}
           
   #     - name: Checkout repo
   #       uses: actions/checkout@v4
@@ -232,7 +232,7 @@ jobs:
   #       with:
   #         aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
   #         aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-  #         aws-region: ${{ secrets.AWS_DEFAULT_REGION }}
+  #         aws-region: ${{ secrets.AWS_REGION_NAME }}
           
   #     - name: Checkout repo
   #       uses: actions/checkout@v4
@@ -276,7 +276,7 @@ jobs:
   #       with:
   #         aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
   #         aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-  #         aws-region: ${{ secrets.AWS_DEFAULT_REGION }}
+  #         aws-region: ${{ secrets.AWS_REGION_NAME }}
 
   #     - name: Checkout repo
   #       uses: actions/checkout@v4
