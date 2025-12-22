@@ -310,7 +310,7 @@ jobs:
         working-directory: ansible
         run: |
 
-          IDS=$(echo '${{ needs.resource_provision.outputs.service_inventory }}' | jq -r '.Self-Hosted-Runner')
+          IDS=$(echo '${{ needs.resource_provision.outputs.service_inventory }}' | jq -r '."Self-Hosted-Runner"')          
           
           ansible-playbook \
             -i "$IDS," \
