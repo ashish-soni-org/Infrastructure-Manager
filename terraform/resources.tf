@@ -53,7 +53,7 @@ resource "aws_instance" "EC2" {
 #   TODO:
   # Note: If your data source depends on the VPC name from the UI, 
   # you would use each.value.vpc_name here.
-#   security_groups = [ data.aws_security_group.Production_Security_Group.id ]
+  security_groups = [ data.aws_security_group.Production_Security_Group.id ]
 
   # Map to the specific subnet ID. 
   # This assumes your data source or resource for subnets is indexed by the subnet name.
