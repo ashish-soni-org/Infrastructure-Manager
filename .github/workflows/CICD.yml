@@ -294,6 +294,11 @@ jobs:
       - name: Install Ansible + Boto
         run: pip install ansible boto3 botocore
 
+      - name: Create Vault Password File
+        run: |
+          echo "${{ secrets.VAULT_PASSWORD }}" > .vault_pass
+          chmod 600 .vault_pass
+
       - name: Generate GitHub App Token
         id: app_token
         uses: actions/create-github-app-token@v1
@@ -307,12 +312,17 @@ jobs:
 
           IDS=$(echo '${{ needs.resource_provision.outputs.service_inventory }}' | jq -r '.Self-Hosted-Runner')
           
-          
           ansible-playbook \
             -i "$IDS," \
             runner.yaml --vault-password-file .vault_pass \
             -e "GITHUB_TOKEN=${{ steps.app_token.outputs.token }}" \
             -e "REPO_URL=${{ github.server_url }}/${{ github.repository }}"
+        env:
+          ANSIBLE_HOST_KEY_CHECKING: "False"
+
+      - name: Clean Password File
+        if: always()
+        run: rm -f .vault_pass
             
   # deploy_website_and_projects:
   #   needs: [hosting_runner, configure_nginx, configure_docker]
