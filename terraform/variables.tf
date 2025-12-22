@@ -39,7 +39,7 @@
   
 # }
 
-# variable "ui_manifest" {
-#   type        = any
-#   description = "Infrastructure manifest from the UI"
-# }
+variable "ui_manifest" {
+  type        = any
+  description = "Infrastructure manifest from the UI"
+}
