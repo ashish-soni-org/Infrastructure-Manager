@@ -1,6 +1,6 @@
 resource "aws_vpc" "VPC" {
   for_each   = local.vpcs
-  cidr_block = "10.0.0.0/16" # In a real scenario, you'd pass this from the UI too
+  cidr_block = "10.0.0.0/16" 
   tags       = { Name = each.value.name }
 }
 
@@ -11,17 +11,27 @@ resource "aws_internet_gateway" "IGW" {
   tags     = { Name = "${each.value.name}-igw" }
 }
 
-# TODO:  2. Create a Route Table that sends traffic (0.0.0.0/0) to the IGW
+# TODO: 2. Create a Route Table (No inline routes to avoid conflicts)
 resource "aws_route_table" "RT" {
   for_each = local.vpcs
   vpc_id   = aws_vpc.VPC[each.key].id
 
-  route {
-    cidr_block = "0.0.0.0/0"
-    gateway_id = aws_internet_gateway.IGW[each.key].id
-  }
-
   tags = { Name = "${each.value.name}-rt" }
+}
+
+# TODO: 3. Create the Route for Public Internet Access
+resource "aws_route" "public_internet_access" {
+  for_each               = local.vpcs
+  route_table_id         = aws_route_table.RT[each.key].id
+  destination_cidr_block = "0.0.0.0/0"
+  gateway_id             = aws_internet_gateway.IGW[each.key].id
+}
+
+# TODO: 4. Associate the Route Table with the Subnets (CRITICAL MISSING LINK)
+resource "aws_route_table_association" "RT_ASSOC" {
+  for_each       = { for sn in local.subnets : sn.key => sn }
+  subnet_id      = aws_subnet.SUBNET[each.key].id
+  route_table_id = aws_route_table.RT[each.value.vpc_name].id
 }
 
 resource "aws_subnet" "SUBNET" {
