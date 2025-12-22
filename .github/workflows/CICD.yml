@@ -12,7 +12,7 @@ jobs:
         working-directory: terraform
 
     outputs:
-      instance_public_ip: ${{ steps.tf_outputs.outputs.instance_public_ip }}
+      service_inventory: ${{ steps.tf_outputs.outputs.inventory }}
       run_docker: ${{ steps.service_check.outputs.run_docker }}
       run_nginx: ${{ steps.service_check.outputs.run_nginx }}
       run_minikube: ${{ steps.service_check.outputs.run_minikube }}
@@ -63,7 +63,8 @@ jobs:
         id: tf_outputs
         if: github.event.client_payload.tf_action != 'destroy'
         run: |
-          echo "ips=$(terraform output -json instance_public_ips)" >> $GITHUB_OUTPUT
+          INVENTORY=$(terraform output -json service_inventory)
+          echo "inventory=$INVENTORY" >> $GITHUB_OUTPUT
 
       - name: Identify Requested Services
         if: github.event.client_payload.tf_action != 'destroy'
@@ -81,9 +82,7 @@ jobs:
     name: Installing NGINX
     needs: resource_provision
     runs-on: ubuntu-latest
-    if: |
-      needs.resource_provision.result == 'success' && 
-      needs.resource_provision.outputs.run_nginx == 'true'
+    if: needs.resource_provision.outputs.run_nginx == 'true'
     defaults:
       run:
         working-directory: ansible
@@ -117,12 +116,10 @@ jobs:
       - name: Install NGINX Server
         run: |
 
-          export AWS_REGION=${{ secrets.AWS_REGION_NAME }}
+          IDS=$(echo '${{ needs.resource_provision.outputs.service_inventory }}' | jq -r '.NGINX')
 
           ansible-playbook \
-            -i inventory_aws_ec2.yml \
-            -u ubuntu \
-            --limit "tag_Services_NGINX" \
+            -i "$IDS," \
             nginx.yaml --vault-password-file .vault_pass
         env:
           ANSIBLE_HOST_KEY_CHECKING: "False"

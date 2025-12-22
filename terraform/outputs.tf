@@ -4,6 +4,19 @@ output "instance_public_ips" {
     for key, instance in aws_instance.EC2 : key => instance.public_ip
   }
 }
+
+output "service_inventory" {
+  description = "Map of services to their associated Instance IDs"
+  value = {
+    # Extract unique services from the manifest and find their matching IDs
+    for service in distinct(flatten([for inst in local.ec2_instances : inst.services])) :
+    service => join(",", [
+      for key, inst in aws_instance.EC2 : inst.id
+      if contains(local.ec2_instances[key].services, service)
+    ])
+  }
+}
+
 # output "instance_id" {
 #   value = aws_instance.Production_server.id
 # }
