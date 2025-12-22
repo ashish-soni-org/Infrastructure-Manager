@@ -6,13 +6,14 @@ output "instance_public_ips" {
 }
 
 output "service_inventory" {
-  description = "Map of services to their associated Instance IDs"
+  description = "Map of services to their associated Instance IDs for Ansible"
   value = {
-    # Extract unique services from the manifest and find their matching IDs
+    # 1. Create a distinct list of all services requested across all instances
     for service in distinct(flatten([for inst in local.ec2_instances : inst.services])) :
     service => join(",", [
+      # 2. Filter instances that have this specific service in their list
       for key, inst in aws_instance.EC2 : inst.id
-      if contains(local.ec2_instances[key].services, service)
+      if contains({ for i in local.ec2_instances : i.key => i.services }[key], service)
     ])
   }
 }
