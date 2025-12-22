@@ -13,10 +13,10 @@
 #   }
 # }
 
-# data "aws_iam_role" "ec2_ssm_role" {
-#   name = "Production-Server-SSM-Role"
-# }
+data "aws_iam_role" "ec2_ssm_role" {
+  name = "Production-Server-SSM-Role"
+}
 
-# data "aws_iam_instance_profile" "ec2_profile" {
-#   name = "Production-Server-SSM-Profile"
-# }
+data "aws_iam_instance_profile" "ec2_profile" {
+  name = "Production-Server-SSM-Profile"
+}
