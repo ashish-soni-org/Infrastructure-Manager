@@ -4,14 +4,14 @@ resource "aws_vpc" "VPC" {
   tags       = { Name = each.value.name }
 }
 
-# TODO: 1. Create an Internet Gateway for each VPC
+# 1. Create an Internet Gateway for each VPC
 resource "aws_internet_gateway" "IGW" {
   for_each = local.vpcs
   vpc_id   = aws_vpc.VPC[each.key].id
   tags     = { Name = "${each.value.name}-igw" }
 }
 
-# TODO: 2. Create a Route Table (No inline routes to avoid conflicts)
+# 2. Create a Route Table (Clean - NO inline route blocks)
 resource "aws_route_table" "RT" {
   for_each = local.vpcs
   vpc_id   = aws_vpc.VPC[each.key].id
@@ -19,7 +19,7 @@ resource "aws_route_table" "RT" {
   tags = { Name = "${each.value.name}-rt" }
 }
 
-# TODO: 3. Create the Route for Public Internet Access
+# 3. Separate Route Resource (More modular for professional orchestration)
 resource "aws_route" "public_internet_access" {
   for_each               = local.vpcs
   route_table_id         = aws_route_table.RT[each.key].id
@@ -27,7 +27,7 @@ resource "aws_route" "public_internet_access" {
   gateway_id             = aws_internet_gateway.IGW[each.key].id
 }
 
-# TODO: 4. Associate the Route Table with the Subnets (CRITICAL MISSING LINK)
+# 4. Explicit Subnet Association
 resource "aws_route_table_association" "RT_ASSOC" {
   for_each       = { for sn in local.subnets : sn.key => sn }
   subnet_id      = aws_subnet.SUBNET[each.key].id
