@@ -304,7 +304,7 @@
     const GITHUB_CONFIG = {
         OWNER: "ashish-soni-org", 
         REPO: "Terraform-Ansible",
-        EVENT_TYPE: "provision-infra-event"
+        EVENT_TYPE: "event-provision-infra"
     };
 
     async function executeGitHubDispatch(manifest, action) {
