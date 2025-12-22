@@ -35,6 +35,11 @@ locals {
             subnet_name = sn.subnet_name
             name        = inst.name
             services    = inst.services
+            
+            # TODO: GET FROM UI
+            ami           = local.ami
+            instance_type = local.instance_type
+
           } if res.type == "EC2"
         ]
       ]
