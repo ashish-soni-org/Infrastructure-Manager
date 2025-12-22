@@ -66,6 +66,11 @@ resource "aws_instance" "EC2" {
   }
 }
 
+resource "random_id" "RAND_ID" {
+  for_each = { for bucket in local.s3_buckets : bucket.key => bucket }
+  byte_length = 8
+}
+
 resource "aws_s3_bucket" "S3_BUCKET" {
   for_each = { for b in local.s3_buckets : b.key => b }
   bucket = "${each.value.name}-${random_id.RAND_ID[each.key].hex}"
@@ -76,32 +81,3 @@ resource "aws_ecr_repository" "ECR_REPO" {
   name     = each.value.name
   image_scanning_configuration { scan_on_push = true }
 }
-
-resource "random_id" "RAND_ID" {
-  for_each = { for bucket in local.s3_buckets : bucket.key => bucket }
-  byte_length = 8
-}
-
-# # Helper to ensure unique bucket names
-# resource "random_string" "suffix" {
-#   for_each = { for bucket in local.s3_buckets : bucket.key => bucket }
-#   length   = 6
-#   special  = false
-#   upper    = false
-# }
-
-# resource "aws_s3_bucket" "first_project_bucket" {
-#   bucket = "project-1-${random_id.rand_id.hex}"
-# }
-
-# resource "aws_s3_bucket" "second_project_bucket" {
-#   bucket = "project-2-${random_id.rand_id.hex}"
-# }
-
-# resource "aws_ecr_repository" "first_project_ECR" {
-#   name = "project-1"
-# }
-
-# resource "aws_ecr_repository" "second_project_ECR" {
-#   name = "project-2"
-# }
