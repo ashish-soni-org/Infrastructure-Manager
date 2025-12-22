@@ -4,6 +4,26 @@ resource "aws_vpc" "VPC" {
   tags       = { Name = each.value.name }
 }
 
+# 1. Create an Internet Gateway for each VPC
+resource "aws_internet_gateway" "IGW" {
+  for_each = local.vpcs
+  vpc_id   = aws_vpc.VPC[each.key].id
+  tags     = { Name = "${each.value.name}-igw" }
+}
+
+# 2. Create a Route Table that sends traffic (0.0.0.0/0) to the IGW
+resource "aws_route_table" "RT" {
+  for_each = local.vpcs
+  vpc_id   = aws_vpc.VPC[each.key].id
+
+  route {
+    cidr_block = "0.0.0.0/0"
+    gateway_id = aws_internet_gateway.IGW[each.key].id
+  }
+
+  tags = { Name = "${each.value.name}-rt" }
+}
+
 resource "aws_subnet" "SUBNET" {
   for_each   = { for sn in local.subnets : sn.key => sn }
   vpc_id     = aws_vpc.VPC[each.value.vpc_name].id
