@@ -310,7 +310,7 @@ jobs:
           
           ansible-playbook \
             -i "$IDS," \
-            runner.yaml \
+            runner.yaml --vault-password-file .vault_pass \
             -e "GITHUB_TOKEN=${{ steps.app_token.outputs.token }}" \
             -e "REPO_URL=${{ github.server_url }}/${{ github.repository }}"
             
