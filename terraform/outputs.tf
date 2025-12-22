@@ -1,5 +1,8 @@
-output "instance_public_ip" {
-  value = aws_instance.EC2.public_ip
+output "instance_public_ips" {
+  description = "Map of instance keys to their public IP addresses"
+  value = {
+    for key, instance in aws_instance.EC2 : key => instance.public_ip
+  }
 }
 # output "instance_id" {
 #   value = aws_instance.Production_server.id

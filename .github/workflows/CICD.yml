@@ -63,7 +63,7 @@ jobs:
         id: tf_outputs
         if: github.event.client_payload.tf_action != 'destroy'
         run: |
-          echo "instance_public_ip=$(terraform output -raw public_ip)" >> $GITHUB_OUTPUT
+          echo "ips=$(terraform output -json instance_public_ips)" >> $GITHUB_OUTPUT
 
       - name: Identify Requested Services
         if: github.event.client_payload.tf_action != 'destroy'
