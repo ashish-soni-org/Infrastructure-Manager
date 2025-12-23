@@ -209,7 +209,7 @@ jobs:
     if: needs.resource_provision.outputs.run_docker == 'true'
     defaults:
       run:
-        working-directory: ansible
+        working-directory: ansible/docker
 
     steps:
       - name: Setup AWS Credentials
