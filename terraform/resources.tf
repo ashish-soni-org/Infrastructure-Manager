@@ -89,7 +89,7 @@ resource "aws_instance" "EC2" {
 
   iam_instance_profile = data.aws_iam_instance_profile.ec2_profile.name
 
-  vpc_security_group_ids = [aws_security_group.WEB_SG]
+  vpc_security_group_ids = [aws_security_group.WEB_SG.id]
   
 #   TODO:
   # Note: If your data source depends on the VPC name from the UI, 
