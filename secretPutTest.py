@@ -7,18 +7,25 @@ client = boto3.client(
 )
 
 secret_name = "ProductionSecrets"
+self_hosted_runner = "runner_name"
+repo = []
 
 secret_value = {
-    "database": {
-        "host": "db.prod.internal",
-        "user": "admin",
-        "password": "supersecret",
-        "port": 5432
-    },
-    "mlflow": {
-        "tracking_uri": "https://dagshub.com/xxx.mlflow",
-        "token": "abc123"
-    }
+    "runner": self_hosted_runner,
+    "repos": [
+        "repo1": {
+            "services": {
+                "S3": "hgfg",
+                "ECR": "jhvjh"
+            }
+        },
+        "repo2": {
+            "services": {
+                "S3": "hgfg",
+                "ECR": "jhvjh"
+            }
+        },
+    ]
 }
 
 response = client.put_secret_value(

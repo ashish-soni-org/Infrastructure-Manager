@@ -52,11 +52,11 @@ aws ecr get-login-password --region $REGION | \\
 docker login --username $USERNAME --password-stdin $ECR >> \$LOG_FILE 2>&1
 
 #stop & remove old containers, pull new images and run them
-$COMMAND
+#\$COMMAND
 EOF
 
 
-sudo chown root "$STARTUP_FILE_NAME" 
-sudo chmod 755 "$STARTUP_FILE_NAME"
+# sudo chown root "$STARTUP_FILE_NAME" 
+# sudo chmod 755 "$STARTUP_FILE_NAME"
 
-sudo ./"$STARTUP_FILE_NAME"
+# sudo ./"$STARTUP_FILE_NAME"
