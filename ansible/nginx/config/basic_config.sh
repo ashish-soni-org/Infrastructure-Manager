@@ -11,5 +11,6 @@ server {
 EOF 
 
 
+
 sudo chown root "$DOMAIN" 
 sudo chmod 0544 "$DOMAIN"
