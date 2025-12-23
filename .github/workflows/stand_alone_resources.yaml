@@ -1,0 +1,53 @@
+name: Provision Standalone Resources
+
+on:
+  repository_dispatch:
+    types: [event-stand-alone-resources]
+
+jobs:
+
+  # ----------------------------------------------------
+  #             PROVISION STANDALONE RESOURCES
+  # ----------------------------------------------------
+
+  stand_alone_resources:
+    name: Provision Standalone Resources
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: terraform
+
+    steps:
+      - name: Setup AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION_NAME }}
+
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.14.2
+
+      - name: Initialize Terraform
+        run: |
+          terraform init \
+            -backend-config="bucket=${{ secrets.AWS_TF_STATE_FILE_BUCKET }}" \
+            -backend-config="key=${{ secrets.AWS_TF_STATE_FILE_PATH }}" \
+            -backend-config="region=${{ secrets.AWS_REGION_NAME }}" \
+            -backend-config="encrypt=true"
+
+      - name: Restore Variables File
+        run: |
+          cat <<EOF > terraform.tfvars.json
+          {
+            "ui_manifest": []
+          }
+          EOF
+
+      - name: Terraform Action Destroy
+        run: terraform destroy -auto-approve
