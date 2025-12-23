@@ -7,7 +7,7 @@ output "service_inventory" {
         id        = inst.id
         public_ip = inst.public_ip
         # Use EIP if available, otherwise public IP
-        ip        = try(aws_eip.Production_elastic_ip[key].public_ip, inst.public_ip)
+        ip        = try(aws_eip.ELASTIC_IP[key].public_ip, inst.public_ip)
         # Extract the specific domain assigned to this instance from the local object
         domain    = lookups(local.ec2_instances[key], "domain", "")
       }
