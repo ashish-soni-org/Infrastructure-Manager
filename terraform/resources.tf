@@ -53,8 +53,10 @@ resource "aws_eip" "ELASTIC_IP" {
 }
 
 resource "aws_security_group" "WEB_SG" {
-  name   = "web-access"
-  vpc_id = aws_vpc.VPC[each.value.vpc_name].id
+  for_each = local.vpcs
+
+  name   = "web-access-${each.key}"
+  vpc_id = aws_vpc.VPC[each.key].id
 
   ingress {
     description = "HTTP"
@@ -78,9 +80,11 @@ resource "aws_security_group" "WEB_SG" {
     protocol    = "-1"
     cidr_blocks = ["0.0.0.0/0"]
   }
+
+  tags = {
+    Name = "web-access-${each.key}"
+  }
 }
-
-
 
 resource "aws_instance" "EC2" {
   for_each = { for inst in local.ec2_instances : inst.key => inst }
@@ -90,7 +94,9 @@ resource "aws_instance" "EC2" {
 
   iam_instance_profile = data.aws_iam_instance_profile.ec2_profile.name
 
-  vpc_security_group_ids = [aws_security_group.WEB_SG.id]
+  vpc_security_group_ids = [
+    aws_security_group.WEB_SG[each.value.vpc_name].id
+  ]
   
 #   TODO:
   # Note: If your data source depends on the VPC name from the UI, 
