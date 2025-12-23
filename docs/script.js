@@ -298,17 +298,23 @@
     render();
 
     /* ==========================================================================
-       CI/CD ORCHESTRATION LOGIC (GITHUB ACTIONS AJAX)
+       CI/CD ORCHESTRATION LOGIC (UPDATED FOR DUAL EVENTS)
        ========================================================================== */
 
     const GITHUB_CONFIG = {
         OWNER: "ashish-soni-org", 
         REPO: "Terraform-Ansible",
-        EVENT_TYPE: "event-provision-infra"
+        EVENT_TYPE_APPLY: "event-provision-infra",
+        EVENT_TYPE_DESTROY: "event-destroy-infra"
     };
 
     async function executeGitHubDispatch(manifest, action) {
         if (!state.token.trim()) return alert("Error: GitHub PAT is required.");
+
+        // Determine specific event type based on action
+        const eventType = action === "destroy" 
+            ? GITHUB_CONFIG.EVENT_TYPE_DESTROY 
+            : GITHUB_CONFIG.EVENT_TYPE_APPLY;
 
         if (action === "apply") state.isProvisioning = true;
         else state.isDestroying = true;
@@ -326,17 +332,17 @@
                     "X-GitHub-Api-Version": "2022-11-28"
                 },
                 body: JSON.stringify({
-                    event_type: GITHUB_CONFIG.EVENT_TYPE,
+                    event_type: eventType, // Uses specific event type now
                     client_payload: {
                         manifest: manifest,
-                        tf_action: action, // Passing 'apply' or 'destroy'
+                        tf_action: action, 
                         timestamp: new Date().toISOString()
                     }
                 })
             });
 
             if (response.status === 204) {
-                alert(`Success: Terraform ${action.toUpperCase()} triggered!`);
+                alert(`Success: ${action === "destroy" ? "Destroy" : "Provision"} event triggered!`);
             } else {
                 throw new Error("GitHub API error.");
             }
