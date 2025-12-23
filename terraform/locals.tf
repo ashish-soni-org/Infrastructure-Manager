@@ -35,6 +35,9 @@ locals {
             subnet_name = sn.subnet_name
             name        = inst.name
             services    = inst.services
+
+            domain       = try(inst.domain, null)
+            ssl_email    = try(inst.ssl_email, null)
             
             # TODO: GET FROM UI
             ami           = local.ami
