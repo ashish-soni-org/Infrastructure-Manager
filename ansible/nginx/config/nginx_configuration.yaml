@@ -28,7 +28,7 @@
         dest: /home/ubuntu/nginx_config_creation_scripts/
         mode: '0755'
       loop:
-        - ../basic_config.sh
+        - basic_config.sh
     
     - name: Create basic configuration file
       ansible.builtin.shell: 
