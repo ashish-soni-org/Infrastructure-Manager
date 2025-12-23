@@ -32,7 +32,7 @@
     
     - name: Create basic configuration file
       ansible.builtin.shell: 
-        cmd: "./basic_config.sh '{{ DOMAIN }}' '{{ CONFIG_FOLDER }}'"
+        cmd: "/basic_config.sh '{{ DOMAIN }}' '{{ CONFIG_FOLDER }}'"
       args:
         chdir: /home/ubuntu/nginx_config_creation_scripts
 
