@@ -57,14 +57,8 @@ jobs:
             -backend-config="region=${{ secrets.AWS_REGION_NAME }}" \
             -backend-config="encrypt=true"
 
-      - name: Terraform Action (Apply or Destroy)
-        run: |
-          ACTION="${{ github.event.client_payload.tf_action }}"
-          if [ "$ACTION" == "destroy" ]; then
-            terraform destroy -auto-approve
-          else
-            terraform apply -auto-approve
-          fi
+      - name: Terraform Action Apply
+        run: terraform apply -auto-approve
 
       - name: Export Terraform outputs
         id: tf_outputs
