@@ -54,7 +54,7 @@ resource "aws_eip" "ELASTIC_IP" {
 
 resource "aws_security_group" "WEB_SG" {
   name   = "web-access"
-  vpc_id = aws_vpc.VPC["production-vpc"].id
+  vpc_id = aws_vpc.VPC[each.value.vpc_name].id
 
   ingress {
     description = "HTTP"
@@ -79,6 +79,7 @@ resource "aws_security_group" "WEB_SG" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 }
+
 
 
 resource "aws_instance" "EC2" {
