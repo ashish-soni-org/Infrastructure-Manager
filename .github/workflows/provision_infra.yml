@@ -17,13 +17,13 @@ jobs:
         working-directory: terraform
 
     outputs:
-      service_inventory: ${{ steps.tf_outputs.outputs.inventory }}
       attach_runner: ${{ steps.service_check.outputs.attach_runner }}
       run_nginx: ${{ steps.service_check.outputs.run_nginx }}
       map_domain: ${{ steps.service_check.outputs.map_domain }}
       run_docker: ${{ steps.service_check.outputs.run_docker }}
       run_minikube: ${{ steps.service_check.outputs.run_minikube }}
-      tf_action: ${{ github.event.client_payload.tf_action }}
+      service_inventory: ${{ steps.tf_outputs.outputs.inventory }}
+      domain_mappings: ${{ steps.tf_outputs.outputs.domain_mappings }}
 
     steps:
       - name: Setup AWS Credentials
@@ -62,13 +62,14 @@ jobs:
 
       - name: Export Terraform outputs
         id: tf_outputs
-        if: github.event.client_payload.tf_action != 'destroy'
         run: |
           INVENTORY=$(terraform output -json service_inventory)
+          DOMAIN_MAPPINGS=$(echo "$INVENTORY" | jq -c '."Map Domain" | map({domain: .domain, ip: .ip})')
+          
           echo "inventory=$INVENTORY" >> $GITHUB_OUTPUT
+          echo "domain_mappings=$DOMAIN_MAPPINGS" >> $GITHUB_OUTPUT
 
       - name: Identify Requested Services
-        if: github.event.client_payload.tf_action != 'destroy'
         id: service_check
         run: |
           ATTACH_RUNNER_REQ=$(jq '[.ui_manifest[].subnets[].resources[] | select(.type=="EC2").instances[].services[] | select(. == "Self-Hosted-Runner")] | length > 0' terraform.tfvars.json)
@@ -287,16 +288,16 @@ jobs:
           echo "${{ secrets.VAULT_PASSWORD }}" > .vault_pass
           chmod 600 .vault_pass
 
-      - name: Configure NGINX Server
+      - name: Configure DNS Mapping
         run: |
 
-          IDS=$(echo '${{ needs.resource_provision.outputs.service_inventory }}' | jq -r '."Map Domain"')
+          IDS=$(echo '${{ needs.resource_provision.outputs.service_inventory }}' | jq -r '."Map Domain"[].id' | paste -sd "," -)
           
           ansible-playbook \
             -i "$IDS," \
-            dns_mapping.yaml --vault-password-file .vault_pass
-            -e "DOMAIN=ashishsoni.in"
-            -e "INSTANCE_IP=${{ needs.resource_provision.outputs.instance_ip }}"
+            dns_mapping.yaml --vault-password-file .vault_pass \
+            -e "domain_mappings='${{ needs.resource_provision.outputs.domain_mappings }}'"
+            # -e "INSTANCE_IP=${{ needs.resource_provision.outputs.instance_ip }}"
         env:
           ANSIBLE_HOST_KEY_CHECKING: "False"
 

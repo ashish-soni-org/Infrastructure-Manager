@@ -1,13 +1,18 @@
 output "service_inventory" {
-  description = "Map of services to their associated Instance IDs for Ansible"
+  description = "Detailed inventory mapping services to Instance IDs and IPs"
   value = {
-    # 1. Create a distinct list of all services requested across all instances
     for service in distinct(flatten([for inst in local.ec2_instances : inst.services])) :
-    service => join(",", [
-      # 2. Filter instances that have this specific service in their list
-      for key, inst in aws_instance.EC2 : inst.id
-      if contains({ for i in local.ec2_instances : i.key => i.services }[key], service)
-    ])
+    service => [
+      for key, inst in aws_instance.EC2 : {
+        id        = inst.id
+        public_ip = inst.public_ip
+        # Use EIP if available, otherwise public IP
+        ip        = try(aws_eip.Production_elastic_ip[key].public_ip, inst.public_ip)
+        # Extract the specific domain assigned to this instance from the local object
+        domain    = lookups(local.ec2_instances[key], "domain", "")
+      }
+      if contains(local.ec2_instances[key].services, service)
+    ]
   }
 }
 
