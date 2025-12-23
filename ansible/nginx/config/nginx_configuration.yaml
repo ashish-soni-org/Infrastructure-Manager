@@ -34,7 +34,7 @@
         cmd: "./basic_config.sh '{{ item.domain }}' '{{ CONFIG_FOLDER }}'"
       args:
         chdir: "{{ WORKDIR }}"
-      loop: "{{ dns_instances }}"
+      loop: "{{ dns_instances | from_json }}"
       loop_control:
         label: "{{ item.instance_id }} → {{ item.domain }}"
 
@@ -44,7 +44,7 @@
         dest: "{{ ENABLEMENT_FOLDER }}/{{ item.domain }}"
         state: link
         force: true
-      loop: "{{ dns_instances }}"
+      loop: "{{ dns_instances | from_json }}"
       loop_control:
         label: "{{ item.domain }}"
 

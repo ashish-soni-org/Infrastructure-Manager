@@ -25,7 +25,7 @@
         type: A
         ttl: 60
         value: "{{ item.ip }}"
-      loop: "{{ dns_instances }}"
+      loop: "{{ dns_instances | from_json }}"
       loop_control:
         label: "{{ item.instance_id }}"
       vars:
@@ -40,6 +40,6 @@
         type: A
         ttl: 60
         value: "{{ item.ip }}"
-      loop: "{{ dns_instances }}"
+      loop: "{{ dns_instances | from_json }}"
       loop_control:
         label: "{{ item.instance_id }}"

@@ -34,7 +34,7 @@
         -d www.{{ item.domain }}
       args:
         creates: "/etc/letsencrypt/live/{{ item.domain }}/fullchain.pem"
-      loop: "{{ dns_instances }}"
+      loop: "{{ dns_instances | from_json }}"
       loop_control:
         label: "{{ item.instance_id }}"
 
