@@ -20,7 +20,7 @@
       amazon.aws.route53:
         state: present
         zone: "{{ item.domain }}"
-        zone_id: "{{ HOSTED_ZONE_ID }}"
+        hosted_zone_id: "{{ HOSTED_ZONE_ID }}"
         record: "{{ record_name }}"
         type: A
         ttl: 60
@@ -35,7 +35,7 @@
       amazon.aws.route53:
         state: present
         zone: "{{ item.domain }}"
-        zone_id: "{{ HOSTED_ZONE_ID }}"
+        hosted_zone_id: "{{ HOSTED_ZONE_ID }}"
         record: "www.{{ item.domain }}"
         type: A
         ttl: 60
