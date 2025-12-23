@@ -48,7 +48,12 @@
       loop_control:
         label: "{{ item.domain }}"
 
-    - name: Remove default Nginx config
+    - name: Remove default NGINX config from sites-enabled
+      ansible.builtin.file:
+        path: "{{ ENABLEMENT_FOLDER }}/default"
+        state: absent
+
+    - name: Remove default NGINX config from sites-available
       ansible.builtin.file:
         path: "{{ CONFIG_FOLDER }}/default"
         state: absent

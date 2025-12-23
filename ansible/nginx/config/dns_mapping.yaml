@@ -25,6 +25,7 @@
         type: A
         ttl: 60
         value: "{{ item.ip }}"
+        overwrite: true
       loop: "{{ dns_instances | from_json }}"
       loop_control:
         label: "{{ item.instance_id }}"
@@ -40,6 +41,7 @@
         type: A
         ttl: 60
         value: "{{ item.ip }}"
+        overwrite: true
       loop: "{{ dns_instances | from_json }}"
       loop_control:
         label: "{{ item.instance_id }}"
