@@ -190,6 +190,7 @@ jobs:
             -i "$IDS," \
             nginx.yaml --vault-password-file .vault_pass
         env:
+          ANSIBLE_CONFIG: "../ansible.cfg"
           ANSIBLE_HOST_KEY_CHECKING: "False"
 
       - name: Clean Password File
