@@ -144,6 +144,7 @@ jobs:
             -e "GITHUB_TOKEN=${{ steps.app_token.outputs.token }}" \
             -e "REPO_URL=${{ github.server_url }}/${{ github.repository }}"
         env:
+          ANSIBLE_CONFIG: "../ansible.cfg"
           ANSIBLE_HOST_KEY_CHECKING: "False"
 
       - name: Clean Password File
