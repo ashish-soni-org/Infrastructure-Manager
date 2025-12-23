@@ -37,20 +37,20 @@
 
     - name: Update Nginx config with HTTPS + redirect
       ansible.builtin.copy:
-        dest: "/etc/nginx/sites-available/{{ DOMAIN_NAME }}"
+        dest: "/etc/nginx/sites-available/{{ DOMAIN }}"
         content: |
           server {
               listen 80;
-              server_name {{ DOMAIN_NAME }} www.{{ DOMAIN_NAME }};
+              server_name {{ DOMAIN }} www.{{ DOMAIN }};
               return 301 https://$host$request_uri;
           }
 
           server {
               listen 443 ssl;
-              server_name {{ DOMAIN_NAME }} www.{{ DOMAIN_NAME }};
+              server_name {{ DOMAIN }} www.{{ DOMAIN }};
 
-              ssl_certificate /etc/letsencrypt/live/{{ DOMAIN_NAME }}/fullchain.pem;
-              ssl_certificate_key /etc/letsencrypt/live/{{ DOMAIN_NAME }}/privkey.pem;
+              ssl_certificate /etc/letsencrypt/live/{{ DOMAIN }}/fullchain.pem;
+              ssl_certificate_key /etc/letsencrypt/live/{{ DOMAIN }}/privkey.pem;
 
               location / {
                   root /var/www/html;
