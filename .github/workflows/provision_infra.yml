@@ -397,7 +397,7 @@ jobs:
           
           ansible-playbook \
             -i "$IDS," \
-            ssl_certified.yaml --vault-password-file .vault_pass
+            ssl_certified.yaml --vault-password-file .vault_pass \
             -e "DOMAIN=ashishsoni.in" \
             -e "DOMAIN_EMAIL=ashishsoni295work@gmail.com"
         env:
