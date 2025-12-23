@@ -29,11 +29,14 @@
         certbot --nginx
         --non-interactive
         --agree-tos
-        --email {{ DOMAIN_EMAIL }}
-        -d {{ DOMAIN }}
-        -d www.{{ DOMAIN }}
+        --email {{ item.domain_email }}
+        -d {{ item.domain }}
+        -d www.{{ item.domain }}
       args:
-        creates: "/etc/letsencrypt/live/{{ DOMAIN }}/fullchain.pem"
+        creates: "/etc/letsencrypt/live/{{ item.domain }}/fullchain.pem"
+      loop: "{{ dns_instances }}"
+      loop_control:
+        label: "{{ item.instance_id }}"
 
     - name: Update Nginx config with HTTPS + redirect
       ansible.builtin.copy:

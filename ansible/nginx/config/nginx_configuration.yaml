@@ -10,6 +10,7 @@
     ansible_connection: "{{ ANSIBLE_CONNECTION }}"
     ansible_aws_ssm_bucket_name: "{{ ANSIBLE_AWS_SSM_BUCKET_NAME }}"
     ansible_aws_ssm_region: "{{ ANSIBLE_AWS_SSM_REGION }}"
+    WORKDIR: /home/ubuntu/nginx_config_creation_scripts
 
   tasks:
     - name: Wait for connection
@@ -18,30 +19,34 @@
 
     - name: Create working directory
       ansible.builtin.file:
-        path: /home/ubuntu/nginx_config_creation_scripts
+        path: "{{ WORKDIR }}"
         state: directory
         mode: '0755'
 
     - name: Upload nginx scripts to server
       ansible.builtin.copy:
-        src: "{{ item }}"
-        dest: /home/ubuntu/nginx_config_creation_scripts/
+        src: basic_config.sh
+        dest: "{{ WORKDIR }}/basic_config.sh"
         mode: '0755'
-      loop:
-        - basic_config.sh
     
     - name: Create basic configuration file
       ansible.builtin.shell: 
-        cmd: "./basic_config.sh '{{ DOMAIN }}' '{{ CONFIG_FOLDER }}'"
+        cmd: "./basic_config.sh '{{ item.domain }}' '{{ CONFIG_FOLDER }}'"
       args:
-        chdir: /home/ubuntu/nginx_config_creation_scripts
+        chdir: "{{ WORKDIR }}"
+      loop: "{{ dns_instances }}"
+      loop_control:
+        label: "{{ item.instance_id }} → {{ item.domain }}"
 
     - name: Enable the site
       ansible.builtin.file:
-        src: "{{ CONFIG_FOLDER }}/{{ DOMAIN }}"
-        dest: "{{ ENABLEMENT_FOLDER }}/{{ DOMAIN }}"
+        src: "{{ CONFIG_FOLDER }}/{{ item.domain }}"
+        dest: "{{ ENABLEMENT_FOLDER }}/{{ item.domain }}"
         state: link
-        force: yes
+        force: true
+      loop: "{{ dns_instances }}"
+      loop_control:
+        label: "{{ item.domain }}"
 
     - name: Remove default Nginx config
       ansible.builtin.file:

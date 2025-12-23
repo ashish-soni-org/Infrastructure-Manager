@@ -22,7 +22,8 @@ jobs:
       map_domain: ${{ steps.service_check.outputs.map_domain }}
       run_docker: ${{ steps.service_check.outputs.run_docker }}
       run_minikube: ${{ steps.service_check.outputs.run_minikube }}
-      service_inventory: ${{ steps.tf_outputs.outputs.inventory }}
+      service_inventory: ${{ steps.tf_outputs.outputs.service_inventory }}
+      map_domain_inventory: ${{ steps.tf_outputs.outputs.map_domain_inventory }}
 
     steps:
       - name: Setup AWS Credentials
@@ -62,9 +63,12 @@ jobs:
       - name: Export Terraform outputs
         id: tf_outputs
         run: |
-          INVENTORY=$(terraform output -json service_inventory)
-          
-          echo "inventory=$INVENTORY" >> $GITHUB_OUTPUT
+          SERVICE_INVENTORY=$(terraform output -json service_inventory)
+          MAP_DOMAIN_INVENTORY=$(terraform output -json map_domain_inventory)
+
+          echo "service_inventory=$SERVICE_INVENTORY" >> $GITHUB_OUTPUT
+          echo "map_domain_inventory=$MAP_DOMAIN_INVENTORY" >> $GITHUB_OUTPUT
+
 
       - name: Identify Requested Services
         id: service_check
@@ -289,13 +293,13 @@ jobs:
       - name: Configure DNS Mapping
         run: |
 
-          IDS=$(echo '${{ needs.resource_provision.outputs.service_inventory }}' | jq -r '."Map Domain"[].id' | paste -sd "," -)
-          
+          IDS=$(echo '${{ needs.resource_provision.outputs.map_domain_inventory }}' | jq -r '.[].instance_id' | paste -sd "," -)
+          DNS_PAYLOAD=$(echo '${{ needs.resource_provision.outputs.map_domain_inventory }}' | jq -c '.')
+
           ansible-playbook \
             -i "$IDS," \
             dns_mapping.yaml --vault-password-file .vault_pass \
-            -e "domain_mappings='${{ needs.resource_provision.outputs.domain_mappings }}'"
-            # -e "INSTANCE_IP=${{ needs.resource_provision.outputs.instance_ip }}"
+            -e "dns_instances=$DNS_PAYLOAD"
         env:
           ANSIBLE_HOST_KEY_CHECKING: "False"
 
@@ -341,12 +345,14 @@ jobs:
       - name: Configure NGINX Server
         run: |
 
-          IDS=$(echo '${{ needs.resource_provision.outputs.service_inventory }}' | jq -r '."Map Domain"')
+          IDS=$(echo '${{ needs.resource_provision.outputs.map_domain_inventory }}' | jq -r '.[].instance_id' | paste -sd "," -)
+
+          DNS_PAYLOAD=$(echo '${{ needs.resource_provision.outputs.map_domain_inventory }}' | jq -c '.')
           
           ansible-playbook \
             -i "$IDS," \
             nginx_configuration.yaml --vault-password-file .vault_pass \
-            -e "DOMAIN=ashishsoni.in"
+            -e "dns_instances=$DNS_PAYLOAD"
         env:
           ANSIBLE_HOST_KEY_CHECKING: "False"
 
@@ -392,13 +398,14 @@ jobs:
       - name: Get SSL Certificate
         run: |
 
-          IDS=$(echo '${{ needs.resource_provision.outputs.service_inventory }}' | jq -r '."Map Domain"')
+          IDS=$(echo '${{ needs.resource_provision.outputs.map_domain_inventory }}' | jq -r '.[].instance_id' | paste -sd "," -)
+
+          DNS_PAYLOAD=$(echo '${{ needs.resource_provision.outputs.map_domain_inventory }}' | jq -c '.')
           
           ansible-playbook \
             -i "$IDS," \
             ssl_certified.yaml --vault-password-file .vault_pass \
-            -e "DOMAIN=ashishsoni.in" \
-            -e "DOMAIN_EMAIL=ashishsoni295work@gmail.com"
+            -e "dns_instances=$DNS_PAYLOAD"
         env:
           ANSIBLE_HOST_KEY_CHECKING: "False"
 

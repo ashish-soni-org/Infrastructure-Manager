@@ -1,15 +1,37 @@
 output "service_inventory" {
   description = "Map of services to their associated Instance IDs for IPs"
+
   value = {
-    # 1. Create a distinct list of all services requested across all instances
     for service in distinct(flatten([for inst in local.ec2_instances : inst.services])) :
     service => join(",", [
-      # 2. Filter instances that have this specific service in their list
       for key, inst in aws_instance.EC2 : inst.id
       if contains({ for i in local.ec2_instances : i.key => i.services }[key], service)
     ])
   }
 }
+
+output "map_domain_inventory" {
+  description = "Per-EC2 domain, IP, and SSL metadata for DNS mapping"
+
+  value = [
+    for inst in local.ec2_instances : {
+      key          = inst.key
+      instance_id  = aws_instance.EC2[inst.key].id
+
+      ip = try(
+        aws_eip.ELASTIC_IP[inst.key].public_ip,
+        aws_instance.EC2[inst.key].private_ip
+      )
+
+      domain       = inst.domain
+      domain_email = inst.ssl_email
+    }
+    if contains(inst.services, "Map Domain")
+  ]
+}
+
+
+
 
 # output "instance_id" {
 #   value = aws_instance.Production_server.id
