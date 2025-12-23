@@ -418,49 +418,52 @@ jobs:
   # ----------------------------------------------------
   
   # DOCKER
-  # configure_docker:
-  #   name: Configuring Docker
-  #   needs: [resource_provision, install_docker]
-  #   runs-on: ubuntu-latest
-  #   defaults:
-  #     run:
-  #       working-directory: ansible
-  #   steps:
-  #     - name: Setup AWS Credentials
-  #       uses: aws-actions/configure-aws-credentials@v4
-  #       with:
-  #         aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-  #         aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-  #         aws-region: ${{ secrets.AWS_REGION_NAME }}
+  strtup_service_docker:
+    name: Run docker containers on startup
+    needs: [resource_provision, install_docker]
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ansible/docker/config
+    steps:
+      - name: Setup AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION_NAME }}
           
-  #     - name: Checkout repo
-  #       uses: actions/checkout@v4
+      - name: Checkout repo
+        uses: actions/checkout@v4
 
-  #     - name: Setup Python
-  #       uses: actions/setup-python@v5
-  #       with:
-  #         python-version: "3.12"
-  #         check-latest: true
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          check-latest: true
 
-  #     - name: Install Ansible + Boto
-  #       run: pip install ansible boto3 botocore
+      - name: Install Ansible + Boto
+        run: pip install ansible boto3 botocore
 
-  #     - name: Create Vault Password File
-  #       run: |
-  #         echo "${{ secrets.VAULT_PASSWORD }}" > .vault_pass
-  #         chmod 600 .vault_pass
+      - name: Create Vault Password File
+        run: |
+          echo "${{ secrets.VAULT_PASSWORD }}" > .vault_pass
+          chmod 600 .vault_pass
 
-  #     - name: Configure Docker Service
-  #       run: |
-  #         ansible-playbook \
-  #           -i "${{ needs.resource_provision.outputs.instance_id }}," \
-  #           docker_configuration.yaml --vault-password-file .vault_pass
-  #       env:
-  #         ANSIBLE_HOST_KEY_CHECKING: "False"
+      - name: Configure Docker Service
+        run: |
 
-  #     - name: Clean Password File
-  #       if: always()
-  #       run: rm -f .vault_pass
+          IDS=$(echo '${{ needs.resource_provision.outputs.service_inventory }}' | jq -r '."Docker"')          
+          
+          ansible-playbook \
+            -i "$IDS," \
+            docker_configuration.yaml --vault-password-file .vault_pass
+        env:
+          ANSIBLE_HOST_KEY_CHECKING: "False"
+
+      - name: Clean Password File
+        if: always()
+        run: rm -f .vault_pass
 
   # ----------------------------------------------------
   #             REPO COMMUNICATION
