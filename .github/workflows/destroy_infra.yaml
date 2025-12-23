@@ -33,7 +33,7 @@ jobs:
         with:
           terraform_version: 1.14.2
 
-      - name: Initialize Terraform (S3 backend)
+      - name: Initialize Terraform
         run: |
           terraform init \
             -backend-config="bucket=${{ secrets.AWS_TF_STATE_FILE_BUCKET }}" \
