@@ -38,8 +38,8 @@
 
     - name: Enable the site
       ansible.builtin.file:
-        src: "{{ CONFIG_FOLDER }}/{{ DOMAIN_NAME }}"
-        dest: "{{ ENABLEMENT_FOLDER }}/{{ DOMAIN_NAME }}"
+        src: "{{ CONFIG_FOLDER }}/{{ DOMAIN }}"
+        dest: "{{ ENABLEMENT_FOLDER }}/{{ DOMAIN }}"
         state: link
         force: yes
 
