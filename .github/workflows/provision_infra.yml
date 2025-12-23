@@ -23,7 +23,6 @@ jobs:
       run_docker: ${{ steps.service_check.outputs.run_docker }}
       run_minikube: ${{ steps.service_check.outputs.run_minikube }}
       service_inventory: ${{ steps.tf_outputs.outputs.inventory }}
-      domain_mappings: ${{ steps.tf_outputs.outputs.domain_mappings }}
 
     steps:
       - name: Setup AWS Credentials
@@ -64,10 +63,8 @@ jobs:
         id: tf_outputs
         run: |
           INVENTORY=$(terraform output -json service_inventory)
-          DOMAIN_MAPPINGS=$(echo "$INVENTORY" | jq -c '."Map Domain" | map({domain: .domain, ip: .ip})')
           
           echo "inventory=$INVENTORY" >> $GITHUB_OUTPUT
-          echo "domain_mappings=$DOMAIN_MAPPINGS" >> $GITHUB_OUTPUT
 
       - name: Identify Requested Services
         id: service_check
