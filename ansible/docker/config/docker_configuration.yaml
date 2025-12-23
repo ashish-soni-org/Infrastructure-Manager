@@ -18,14 +18,14 @@
 
     - name: Create working directory
       ansible.builtin.file:
-        path: {{ WORKDIR }}
+        path: "{{ WORKDIR }}"
         state: directory
         mode: '0755'
 
     - name: Upload docker script file to server
       ansible.builtin.copy:
         src: startup_script.sh
-        dest: {{ WORKDIR }}
+        dest: "{{ WORKDIR }}"
         mode: '0755'
 
     - name: Upload docker service file to server
@@ -63,7 +63,7 @@
       ansible.builtin.shell: 
         cmd: "./startup_script.sh '{{ FILE_PATH }}' '{{ LOG_FILE_NAME }}' '{{ STARTUP_FILE_NAME }}' '{{ REGION }}' '{{ USERNAME }}' '{{ ECR }}' '{{ CONTAINERS }}' '{{ MAPPED_PORTS }}'"
       args:
-        chdir: {{ WORKDIR }}
+        chdir: "{{ WORKDIR }}"
 
     - name: Enable and start startup service
       ansible.builtin.systemd:
