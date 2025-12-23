@@ -4,7 +4,7 @@
   become: true
 
   vars_files:
-    - nginx/vars/secrets.yml
+    - ../secrets/secrets.yml
 
   vars:
     ansible_connection: "{{ ANSIBLE_CONNECTION }}"

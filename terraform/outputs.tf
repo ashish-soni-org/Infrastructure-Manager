@@ -1,10 +1,3 @@
-output "instance_public_ips" {
-  description = "Map of instance keys to their public IP addresses"
-  value = {
-    for key, instance in aws_instance.EC2 : key => instance.public_ip
-  }
-}
-
 output "service_inventory" {
   description = "Map of services to their associated Instance IDs for Ansible"
   value = {
