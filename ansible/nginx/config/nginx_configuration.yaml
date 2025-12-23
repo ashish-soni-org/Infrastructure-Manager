@@ -45,10 +45,11 @@
 
     - name: Remove default Nginx config
       ansible.builtin.file:
-        path: "{{ ENABLEMENT_FOLDER }}/default"
+        path: "{{ CONFIG_FOLDER }}/default"
         state: absent
 
     - name: Reload Nginx
       ansible.builtin.service:
         name: nginx
         state: reloaded
+      when: nginx_test.rc == 0
