@@ -1,4 +1,5 @@
 name: Infrastructure Destroy
+
 on:
   repository_dispatch:
     types: [event-destroy-infra]
@@ -32,8 +33,21 @@ jobs:
         with:
           terraform_version: 1.14.2
 
-      - name: Initialize Terraform
-        run: terraform init
+      - name: Initialize Terraform (S3 backend)
+        run: |
+          terraform init \
+            -backend-config="bucket=${{ secrets.AWS_TF_STATE_FILE_BUCKET }}" \
+            -backend-config="key=${{ secrets.AWS_TF_STATE_FILE_PATH }}" \
+            -backend-config="region=${{ secrets.AWS_REGION_NAME }}" \
+            -backend-config="encrypt=true"
+
+      - name: Restore Variables File
+        run: |
+          cat <<EOF > terraform.tfvars.json
+          {
+            "ui_manifest": []
+          }
+          EOF
 
       - name: Terraform Action Destroy
         run: terraform destroy -auto-approve
