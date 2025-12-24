@@ -90,3 +90,11 @@
         daemon_reload: true
         enabled: true
         state: started
+
+    - name: Run Python script with env
+      ansible.builtin.command: python3 ../../secretsManager.py
+      environment:
+        AWS_REGION: "{{ ANSIBLE_AWS_SSM_REGION }}"
+        SECRET_FILE_NAME: "{{ SECRETS_FILE_NAME }}"
+        SELF_HOSTED_RUNNER: "{{ inventory_hostname }}"
+
