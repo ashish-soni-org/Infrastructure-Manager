@@ -26,17 +26,20 @@ locals {
   # ---------------------------------------------------------------------------
   # STEP 3: Normalize Subnets (unique per VPC + subnet)
   # ---------------------------------------------------------------------------
-  subnets = flatten([
+  subnets = {
+  for item in flatten([
     for vpc_name, events in local.vpc_events : [
-      for sn in distinct(flatten([
-        for e in events : e.subnets
-      ])) : {
-        key      = "${vpc_name}-${sn.subnet_name}"
-        vpc_name = vpc_name
-        name     = sn.subnet_name
-      }
+      for e in events : [
+        for sn in e.subnets : {
+          key      = "${vpc_name}-${sn.subnet_name}"
+          vpc_name = vpc_name
+          name     = sn.subnet_name
+        }
+      ]
     ]
-  ])
+  ]) : item.key => item
+}
+
 
   # ---------------------------------------------------------------------------
   # STEP 4: Normalize EC2 instances (unique per permanent key)
@@ -68,20 +71,22 @@ locals {
   # ---------------------------------------------------------------------------
   # STEP 5: Normalize S3 buckets (unique by key)
   # ---------------------------------------------------------------------------
-  s3_buckets = flatten([
-    for vpc_name, events in local.vpc_events : [
-      for sn in flatten([
-        for e in events : e.subnets
-      ]) : [
-        for res in sn.resources : [
-          for inst in res.instances : {
-            key  = "${vpc_name}-${sn.subnet_name}-${inst.name}"
-            name = lower(inst.name)
-          } if res.type == "S3"
+  s3_buckets = {
+    for item in flatten([
+      for vpc_name, events in local.vpc_events : [
+        for e in events : [
+          for sn in e.subnets : [
+            for res in sn.resources : [
+              for inst in res.instances : {
+                key  = "${vpc_name}-${sn.subnet_name}-${inst.name}"
+                name = lower(inst.name)
+              } if res.type == "S3"
+            ]
+          ]
         ]
       ]
-    ]
-  ])
+    ]) : item.key => item
+  }
 
   # ---------------------------------------------------------------------------
   # STEP 6: Normalize ECR repositories (unique by key)
