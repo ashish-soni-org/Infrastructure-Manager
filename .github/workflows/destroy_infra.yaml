@@ -51,3 +51,9 @@ jobs:
 
       - name: Terraform Action Destroy
         run: terraform destroy -auto-approve
+
+      - name: Clear provisioning manifest in S3
+        run: |
+          echo "[]" > empty.json
+          aws s3 cp empty.json \
+            "s3://${{ secrets.AWS_TF_STATE_FILE_BUCKET }}/${{ secrets.AWS_TF_STATE_MANIFEST_FILE_PATH }}"
