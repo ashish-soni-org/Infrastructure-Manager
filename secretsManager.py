@@ -30,7 +30,7 @@ def handle_secret():
                 client.create_secret(
                     Name=SECRET_NAME,
                     SecretString=secret_string,
-                    Description="GitHub Self-Hosted Runner Metadata"
+                    Description="This Contains all the secrets related to EC2 instance Production Server"
                 )
                 print(f"Successfully created new secret: {SECRET_NAME}")
             except ClientError as e:

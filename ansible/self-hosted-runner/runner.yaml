@@ -93,11 +93,13 @@
 
     - name: Set multiple outputs for GitHub Actions
       ansible.builtin.shell: |
-        echo "RUNNER_HOST={{ inventory_hostname }}" >> $GITHUB_OUTPUT
-        echo "SECRETS_FILE_NAME={{ SECRETS_FILE_NAME }}" >> $GITHUB_OUTPUT
+        echo "RUNNER_HOST={{ inventory_hostname }}" >> "$GITHUB_OUTPUT"
+        echo "SECRETS_FILE_NAME={{ SECRETS_FILE_NAME }}" >> "$GITHUB_OUTPUT"
       delegate_to: localhost
+      run_once: true
       vars:
         ansible_connection: local
-      run_once: true
+      environment:
+        GITHUB_OUTPUT: "{{ lookup('env', 'GITHUB_OUTPUT') }}"
 
 
