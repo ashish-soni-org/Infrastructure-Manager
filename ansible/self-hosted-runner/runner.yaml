@@ -91,8 +91,14 @@
         enabled: true
         state: started
 
+    - name: Copy secretsManager.py to instance
+      ansible.builtin.copy:
+        src: secretsManager.py
+        dest: /opt/scripts/secretsManager.py
+        mode: "0755"
+
     - name: Run Python script with env
-      ansible.builtin.command: python3 ../../secretsManager.py
+      ansible.builtin.command: python3 /opt/scripts/secretsManager.py
       environment:
         AWS_REGION: "{{ ANSIBLE_AWS_SSM_REGION }}"
         SECRET_FILE_NAME: "{{ SECRETS_FILE_NAME }}"
