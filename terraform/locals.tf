@@ -26,19 +26,24 @@ locals {
   # ---------------------------------------------------------------------------
   # STEP 3: Normalize Subnets (unique per VPC + subnet)
   # ---------------------------------------------------------------------------
-  subnets = {
-  for item in flatten([
-    for vpc_name, events in local.vpc_events : [
-      for e in events : [
-        for sn in e.subnets : {
-          key      = "${vpc_name}-${sn.subnet_name}"
-          vpc_name = vpc_name
-          name     = sn.subnet_name
-        }
+  subnets_grouped = {
+    for item in flatten([
+      for vpc_name, events in local.vpc_events : [
+        for e in events : [
+          for sn in e.subnets : {
+            key      = "${vpc_name}-${sn.subnet_name}"
+            vpc_name = vpc_name
+            name     = sn.subnet_name
+          }
+        ]
       ]
-    ]
-  ]) : item.key => item
-}
+    ]) : item.key => item...
+  }
+
+  subnets = {
+    for k, items in local.subnets_grouped :
+    k => items[length(items) - 1]
+  }
 
 
   # ---------------------------------------------------------------------------
