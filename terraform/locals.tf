@@ -49,29 +49,36 @@ locals {
   # ---------------------------------------------------------------------------
   # STEP 4: Normalize EC2 instances (unique per permanent key)
   # ---------------------------------------------------------------------------
-  ec2_instances = flatten([
-    for vpc_name, events in local.vpc_events : [
-      for sn in flatten([
-        for e in events : e.subnets
-      ]) : [
-        for res in sn.resources : [
-          for inst in res.instances : {
-            key         = "${vpc_name}-${sn.subnet_name}-${inst.name}"
-            vpc_name    = vpc_name
-            subnet_name = sn.subnet_name
-            name        = inst.name
-            services    = inst.services
+  ec2_instances_grouped = {
+    for item in flatten([
+      for vpc_name, events in local.vpc_events : [
+        for e in events : [
+          for sn in e.subnets : [
+            for res in sn.resources : [
+              for inst in res.instances : {
+                key         = "${vpc_name}-${sn.subnet_name}-${inst.name}"
+                vpc_name    = vpc_name
+                subnet_name = sn.subnet_name
+                name        = inst.name
+                services    = inst.services
 
-            domain    = try(inst.domain, null)
-            ssl_email = try(inst.ssl_email, null)
+                domain    = try(inst.domain, null)
+                ssl_email = try(inst.ssl_email, null)
 
-            ami           = local.ami
-            instance_type = local.instance_type
-          } if res.type == "EC2"
+                ami           = local.ami
+                instance_type = local.instance_type
+              } if res.type == "EC2"
+            ]
+          ]
         ]
       ]
-    ]
-  ])
+    ]) : item.key => item...
+  }
+
+  ec2_instances = {
+    for k, items in local.ec2_instances_grouped :
+    k => items[length(items) - 1]
+  }
 
   # ---------------------------------------------------------------------------
   # STEP 5: Normalize S3 buckets (unique by key)
