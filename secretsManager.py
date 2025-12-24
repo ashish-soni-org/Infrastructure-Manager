@@ -6,6 +6,7 @@ import boto3
 region = "AWS_REGION"
 action = "ACTION_TYPE"
 update_repo = "UPDATE_REPO"
+create_new_runner = "CREATE_NEW_RUNNER"
 secret_file_name = "SECRET_FILE_NAME"
 runner = "SELF_HOSTED_RUNNER"
 
@@ -21,7 +22,7 @@ self_hosted_runner = os.getenv(runner)
 repo = []
 
 
-# basic file
+# new file
 secret_value = {
     "runner": self_hosted_runner,
     "repos": {}
@@ -35,9 +36,11 @@ def upsert_repo(secret, repo_name, services: dict):
 
     repo["services"].update(services)
 
+
+
 if __name__ == '__main__':
-    if action == update_repo:
-        pass
+    if action == create_new_runner:
+        client.put_secret_value(SecretId = secret_file, SecretString = json.dumps(secret_value))
 
 # upsert_repo(
 #     secret_value,
@@ -62,7 +65,8 @@ if __name__ == '__main__':
 # )
 
 # updating secrets
-response = client.put_secret_value(
-    SecretId = secret_file,
-    SecretString = json.dumps(secret_value)
-)
+def updateSecrets(file_name, secret_value):
+    client.put_secret_value(
+        SecretId = file_name,
+        SecretString = json.dumps(secret_value)
+    )

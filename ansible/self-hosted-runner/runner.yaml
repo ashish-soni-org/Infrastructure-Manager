@@ -96,5 +96,6 @@
       environment:
         AWS_REGION: "{{ ANSIBLE_AWS_SSM_REGION }}"
         SECRET_FILE_NAME: "{{ SECRETS_FILE_NAME }}"
+        ACTION_TYPE: "CREATE_NEW_RUNNER"
         SELF_HOSTED_RUNNER: "{{ inventory_hostname }}"
 
