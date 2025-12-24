@@ -92,8 +92,8 @@
         enabled: true
         state: started
 
-    - name: Update secrets in AWS Secrets Manager (control plane)
-      ansible.builtin.command: python3 secretsManager.py
+    - name: Update secrets in AWS Secrets Manager
+      ansible.builtin.command: python3 ../../secretsManager.py
       delegate_to: localhost
       run_once: true
       environment:
