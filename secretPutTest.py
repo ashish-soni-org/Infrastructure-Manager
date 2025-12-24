@@ -1,3 +1,4 @@
+import sys
 import json
 import boto3
 
@@ -6,31 +7,51 @@ client = boto3.client(
     region_name="ap-south-1"
 )
 
+
+
 secret_name = "ProductionSecrets"
-self_hosted_runner = "runner_name"
+self_hosted_runner = sys.argv[1]
 repo = []
 
 secret_value = {
     "runner": self_hosted_runner,
-    "repos": [
-        "repo1": {
-            "services": {
-                "S3": "hgfg",
-                "ECR": "jhvjh"
-            }
-        },
-        "repo2": {
-            "services": {
-                "S3": "hgfg",
-                "ECR": "jhvjh"
-            }
-        },
-    ]
+    "repos": {}
 }
+
+
+def upsert_repo(secret, repo_name, services: dict):
+    repos = secret.setdefault("repos", {})
+
+    repo = repos.setdefault(repo_name, {"services": {}})
+
+    repo["services"].update(services)
+
+upsert_repo(
+    secret_value,
+    "repo1",
+    {}
+)
+upsert_repo(
+    secret_value,
+    "repo2",
+    {
+        "S3": "abc",
+        "ECR": "xyz"
+    }
+)
+
+upsert_repo(
+    secret_value,
+    "repo3",
+    {
+        "Route53": "domain-mapping"
+    }
+)
+
 
 response = client.put_secret_value(
     SecretId=secret_name,
     SecretString=json.dumps(secret_value)
 )
 
-print("Secret updated. Version:", response["VersionId"])
+print(f"Secret updated. {secret_value}")

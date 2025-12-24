@@ -41,11 +41,30 @@ jobs:
         with:
           terraform_version: 1.14.2
 
-      - name: Create Variables File
+      - name: Load and merge provisioning manifest
         run: |
+          set -e
+
+          # Fetch existing manifest (if any)
+          if aws s3 ls "s3://${{ secrets.AWS_TF_STATE_FILE_BUCKET }}/${{ secrets.AWS_TF_STATE_MANIFEST_FILE_PATH }}" > /dev/null 2>&1; then
+            aws s3 cp "s3://${{ secrets.AWS_TF_STATE_FILE_BUCKET }}/${{ secrets.AWS_TF_STATE_MANIFEST_FILE_PATH }}" old.json
+          else
+            echo "[]" > old.json
+          fi
+
+          # Incoming UI manifest (delta)
+          echo '${{ toJson(github.event.client_payload.manifest) }}' > new.json
+
+          # Merge (append-only by design)
+          jq -s '.[0] + .[1]' old.json new.json > merged.json
+
+          # Persist merged manifest
+          aws s3 cp merged.json "s3://${{ secrets.AWS_TF_STATE_FILE_BUCKET }}/${{ secrets.AWS_TF_STATE_MANIFEST_FILE_PATH }}"
+
+          # Generate terraform variables
           cat <<EOF > terraform.tfvars.json
           {
-            "ui_manifest": ${{ toJson(github.event.client_payload.manifest) }}
+            "ui_manifest": $(cat merged.json)
           }
           EOF
 
