@@ -91,22 +91,11 @@
         enabled: true
         state: started
 
-    - name: Set Runner Hostname for GitHub Actions
-      ansible.builtin.shell: echo "RUNNER_HOST={{ inventory_hostname }}" >> $GITHUB_OUTPUT
+    - name: Set multiple outputs for GitHub Actions
+      ansible.builtin.shell: |
+        echo "RUNNER_HOST={{ inventory_hostname }}" >> $GITHUB_OUTPUT
+        echo "SECRETS_FILE_NAME={{ SECRETS_FILE_NAME }}" >> $GITHUB_OUTPUT
       delegate_to: localhost
       run_once: true
-
-    # - name: Update secrets in AWS Secrets Manager
-    #   ansible.builtin.command: python3 ../../secretsManager.py
-    #   delegate_to: localhost
-    #   run_once: true
-    #   vars:
-    #     ansible_connection: local
-    #   environment:
-    #     AWS_REGION: "{{ ANSIBLE_AWS_SSM_REGION }}"
-    #     SECRET_FILE_NAME: "{{ SECRETS_FILE_NAME }}"
-    #     ACTION_TYPE: "CREATE_NEW_RUNNER"
-    #     SELF_HOSTED_RUNNER: "Runner"
-    #     # SELF_HOSTED_RUNNER: "{{ inventory_hostname }}"
 
 

@@ -148,29 +148,28 @@ jobs:
           app-id: ${{ secrets.GH_APP_ID }}
           private-key: ${{ secrets.GH_APP_PRIVATE_KEY }}
           
-      # - name: Create and Attach Runner
-      #   id: ansible_step
-      #   run: |
+      - name: Create and Attach Runner
+        id: ansible_step
+        run: |
 
-      #     IDS=$(echo '${{ needs.resource_provision.outputs.service_inventory }}' | jq -r '."Self-Hosted-Runner"')          
+          IDS=$(echo '${{ needs.resource_provision.outputs.service_inventory }}' | jq -r '."Self-Hosted-Runner"')          
           
-      #     ansible-playbook \
-      #       -i "$IDS," \
-      #       runner.yaml --vault-password-file .vault_pass \
-      #       -e "GITHUB_TOKEN=${{ steps.app_token.outputs.token }}" \
-      #       -e "REPO_URL=${{ github.server_url }}/${{ github.repository }}"
-      #   env:
-      #     ANSIBLE_CONFIG: "../ansible.cfg"
-      #     ANSIBLE_HOST_KEY_CHECKING: "False"
+          ansible-playbook \
+            -i "$IDS," \
+            runner.yaml --vault-password-file .vault_pass \
+            -e "GITHUB_TOKEN=${{ steps.app_token.outputs.token }}" \
+            -e "REPO_URL=${{ github.server_url }}/${{ github.repository }}"
+        env:
+          ANSIBLE_CONFIG: "../ansible.cfg"
+          ANSIBLE_HOST_KEY_CHECKING: "False"
 
       - name: Update secrets in AWS Secrets Manager
         run: python3 ../../secretsManager.py
         env:
           AWS_REGION: ${{ secrets.AWS_REGION_NAME }}
-          SECRET_FILE_NAME: "hhh" # Ensure this is in GH Secrets
+          SECRET_FILE_NAME: ${{ steps.ansible_step.outputs.SECRETS_FILE_NAME }}
           ACTION_TYPE: "CREATE_NEW_RUNNER"
-          SELF_HOSTED_RUNNER: "uion"
-          # SELF_HOSTED_RUNNER: ${{ steps.ansible_step.outputs.RUNNER_HOST }}
+          SELF_HOSTED_RUNNER: ${{ steps.ansible_step.outputs.RUNNER_HOST }}
 
       - name: Clean Password File
         if: always()
