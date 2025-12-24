@@ -1,72 +1,61 @@
 import os
 import json
 import boto3
+from botocore.exceptions import ClientError
 
-# variables
-region = "AWS_REGION"
-action = "ACTION_TYPE"
-update_repo = "UPDATE_REPO"
-create_new_runner = "CREATE_NEW_RUNNER"
-secret_file_name = "SECRET_FILE_NAME"
-runner = "SELF_HOSTED_RUNNER"
+# Configuration from Environment Variables
+REGION = os.getenv("AWS_REGION")
+ACTION = os.getenv("ACTION_TYPE")
+SECRET_NAME = os.getenv("SECRET_FILE_NAME")
+RUNNER_NAME = os.getenv("SELF_HOSTED_RUNNER")
 
-# getting AWS client service
-client = boto3.client(
-    "secretsmanager",
-    region_name=os.getenv(region)
-)
+# Constants
+CREATE_ACTION = "CREATE_NEW_RUNNER"
 
+def get_client():
+    return boto3.client("secretsmanager", region_name=REGION)
 
-secret_file = os.getenv(secret_file_name)
-self_hosted_runner = os.getenv(runner)
-repo = []
+def handle_secret():
+    client = get_client()
+    
+    secret_payload = {
+        "runner": RUNNER_NAME,
+        "repos": {}
+    }
+    secret_string = json.dumps(secret_payload)
 
+    try:
+        if ACTION == CREATE_ACTION:
+            try:
+                client.create_secret(
+                    Name=SECRET_NAME,
+                    SecretString=secret_string,
+                    Description="GitHub Self-Hosted Runner Metadata"
+                )
+                print(f"Successfully created new secret: {SECRET_NAME}")
+            except ClientError as e:
+                if e.response['Error']['Code'] == 'ResourceExistsException':
+                    client.put_secret_value(
+                        SecretId=SECRET_NAME,
+                        SecretString=secret_string
+                    )
+                    print(f"Secret {SECRET_NAME} already exists. Updated value instead.")
+                else:
+                    raise e
+    except Exception as e:
+        print(f"Error managing secret: {str(e)}")
+        exit(1)
 
-# new file
-secret_value = {
-    "runner": self_hosted_runner,
-    "repos": {}
-}
-
-
-def upsert_repo(secret, repo_name, services: dict):
-    repos = secret.setdefault("repos", {})
-
+def upsert_repo(secret_dict, repo_name, services: dict):
+    """Utility to modify the dictionary structure locally"""
+    repos = secret_dict.setdefault("repos", {})
     repo = repos.setdefault(repo_name, {"services": {}})
-
     repo["services"].update(services)
-
-
+    return secret_dict
 
 if __name__ == '__main__':
-    if action == create_new_runner:
-        client.put_secret_value(SecretId = secret_file, SecretString = json.dumps(secret_value))
-
-# upsert_repo(
-#     secret_value,
-#     "repo1",
-#     {}
-# )
-# upsert_repo(
-#     secret_value,
-#     "repo2",
-#     {
-#         "S3": "abc",
-#         "ECR": "xyz"
-#     }
-# )
-
-# upsert_repo(
-#     secret_value,
-#     "repo3",
-#     {
-#         "Route53": "domain-mapping"
-#     }
-# )
-
-# updating secrets
-def updateSecrets(file_name, secret_value):
-    client.put_secret_value(
-        SecretId = file_name,
-        SecretString = json.dumps(secret_value)
-    )
+    if not all([REGION, SECRET_NAME, ACTION]):
+        print("Missing required environment variables (AWS_REGION, SECRET_FILE_NAME, ACTION_TYPE)")
+        exit(1)
+        
+    handle_secret()
