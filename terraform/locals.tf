@@ -1,76 +1,100 @@
 locals {
-  # --- Static Configuration ---
-  # Hard-coded for now; will be moved to var.ui_manifest logic in the future
+  # ---------------------------------------------------------------------------
+  # Static configuration (temporary; UI-driven later)
+  # ---------------------------------------------------------------------------
   instance_type = "t3.micro"
-  ami = "ami-02b8269d5e85954ef"
+  ami           = "ami-02b8269d5e85954ef"
 
+  # ---------------------------------------------------------------------------
+  # STEP 1: Group manifest by VPC name (event-sourced → state-based)
+  # ---------------------------------------------------------------------------
+  vpc_events = {
+    for vpc in var.ui_manifest :
+    vpc.vpc_name => vpc...
+  }
 
-
-  # Extract Unique VPCs
+  # ---------------------------------------------------------------------------
+  # STEP 2: Normalize VPCs (unique by name)
+  # ---------------------------------------------------------------------------
   vpcs = {
-    for vpc in var.ui_manifest : vpc.vpc_name => {
-      name = vpc.vpc_name
+    for vpc_name, events in local.vpc_events :
+    vpc_name => {
+      name = vpc_name
     }
   }
 
-  # Extract Unique Subnets
+  # ---------------------------------------------------------------------------
+  # STEP 3: Normalize Subnets (unique per VPC + subnet)
+  # ---------------------------------------------------------------------------
   subnets = flatten([
-    for vpc in var.ui_manifest : [
-      for sn in vpc.subnets : {
-        key      = "${vpc.vpc_name}-${sn.subnet_name}"
-        vpc_name = vpc.vpc_name
+    for vpc_name, events in local.vpc_events : [
+      for sn in distinct(flatten([
+        for e in events : e.subnets
+      ])) : {
+        key      = "${vpc_name}-${sn.subnet_name}"
+        vpc_name = vpc_name
         name     = sn.subnet_name
       }
     ]
   ])
 
-  # Extract EC2 Instances
+  # ---------------------------------------------------------------------------
+  # STEP 4: Normalize EC2 instances (unique per permanent key)
+  # ---------------------------------------------------------------------------
   ec2_instances = flatten([
-    for vpc in var.ui_manifest : [
-      for sn in vpc.subnets : [
+    for vpc_name, events in local.vpc_events : [
+      for sn in flatten([
+        for e in events : e.subnets
+      ]) : [
         for res in sn.resources : [
           for inst in res.instances : {
-            key         = "${vpc.vpc_name}-${sn.subnet_name}-${inst.name}"
-            vpc_name    = vpc.vpc_name
+            key         = "${vpc_name}-${sn.subnet_name}-${inst.name}"
+            vpc_name    = vpc_name
             subnet_name = sn.subnet_name
             name        = inst.name
             services    = inst.services
 
-            domain       = try(inst.domain, null)
-            ssl_email    = try(inst.ssl_email, null)
-            
-            # TODO: GET FROM UI
+            domain    = try(inst.domain, null)
+            ssl_email = try(inst.ssl_email, null)
+
             ami           = local.ami
             instance_type = local.instance_type
-
           } if res.type == "EC2"
         ]
       ]
     ]
   ])
 
-  # Extract S3 Buckets
+  # ---------------------------------------------------------------------------
+  # STEP 5: Normalize S3 buckets (unique by key)
+  # ---------------------------------------------------------------------------
   s3_buckets = flatten([
-    for vpc in var.ui_manifest : [
-      for sn in vpc.subnets : [
+    for vpc_name, events in local.vpc_events : [
+      for sn in flatten([
+        for e in events : e.subnets
+      ]) : [
         for res in sn.resources : [
           for inst in res.instances : {
-            key  = "${vpc.vpc_name}-${sn.subnet_name}-${inst.name}"
-            name = lower(inst.name) # S3 names must be lowercase
+            key  = "${vpc_name}-${sn.subnet_name}-${inst.name}"
+            name = lower(inst.name)
           } if res.type == "S3"
         ]
       ]
     ]
   ])
 
-  # Extract ECR Repositories
+  # ---------------------------------------------------------------------------
+  # STEP 6: Normalize ECR repositories (unique by key)
+  # ---------------------------------------------------------------------------
   ecr_repositories = flatten([
-    for vpc in var.ui_manifest : [
-      for sn in vpc.subnets : [
+    for vpc_name, events in local.vpc_events : [
+      for sn in flatten([
+        for e in events : e.subnets
+      ]) : [
         for res in sn.resources : [
           for inst in res.instances : {
-            key  = "${vpc.vpc_name}-${sn.subnet_name}-${inst.name}"
-            name = lower(inst.name) # ECR repo names are typically lowercase
+            key  = "${vpc_name}-${sn.subnet_name}-${inst.name}"
+            name = lower(inst.name)
           } if res.type == "ECR"
         ]
       ]
