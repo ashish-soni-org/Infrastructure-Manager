@@ -92,17 +92,14 @@
         enabled: true
         state: started
 
-    - name: Copy secretsManager.py to instance
-      ansible.builtin.copy:
-        src: ../../secretsManager.py
-        dest: "{{ python_file }}"
-        mode: "0755"
-
-    - name: Run Python script with env
-      ansible.builtin.command: python3 "{{ python_file }}"
+    - name: Update secrets in AWS Secrets Manager (control plane)
+      ansible.builtin.command: python3 secretsManager.py
+      delegate_to: localhost
+      run_once: true
       environment:
         AWS_REGION: "{{ ANSIBLE_AWS_SSM_REGION }}"
         SECRET_FILE_NAME: "{{ SECRETS_FILE_NAME }}"
         ACTION_TYPE: "CREATE_NEW_RUNNER"
         SELF_HOSTED_RUNNER: "{{ inventory_hostname }}"
+
 
