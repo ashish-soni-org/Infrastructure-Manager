@@ -9,444 +9,444 @@ jobs:
   #             RESOURCE PROVISION
   # ----------------------------------------------------
 
-  # resource_provision:
-  #   name: Provisioning required resources
-  #   runs-on: ubuntu-latest
-  #   defaults:
-  #     run:
-  #       working-directory: terraform
+  resource_provision:
+    name: Provisioning required resources
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: terraform
 
-  #   outputs:
-  #     attach_runner: ${{ steps.service_check.outputs.attach_runner }}
-  #     run_nginx: ${{ steps.service_check.outputs.run_nginx }}
-  #     map_domain: ${{ steps.service_check.outputs.map_domain }}
-  #     run_docker: ${{ steps.service_check.outputs.run_docker }}
-  #     run_minikube: ${{ steps.service_check.outputs.run_minikube }}
-  #     service_inventory: ${{ steps.tf_outputs.outputs.service_inventory }}
-  #     map_domain_inventory: ${{ steps.tf_outputs.outputs.map_domain_inventory }}
+    outputs:
+      attach_runner: ${{ steps.service_check.outputs.attach_runner }}
+      run_nginx: ${{ steps.service_check.outputs.run_nginx }}
+      map_domain: ${{ steps.service_check.outputs.map_domain }}
+      run_docker: ${{ steps.service_check.outputs.run_docker }}
+      run_minikube: ${{ steps.service_check.outputs.run_minikube }}
+      service_inventory: ${{ steps.tf_outputs.outputs.service_inventory }}
+      map_domain_inventory: ${{ steps.tf_outputs.outputs.map_domain_inventory }}
 
-  #   steps:
-  #     - name: Setup AWS Credentials
-  #       uses: aws-actions/configure-aws-credentials@v4
-  #       with:
-  #         aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-  #         aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-  #         aws-region: ${{ secrets.AWS_REGION_NAME }}
+    steps:
+      - name: Setup AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION_NAME }}
 
-  #     - name: Checkout repo
-  #       uses: actions/checkout@v4
+      - name: Checkout repo
+        uses: actions/checkout@v4
 
-  #     - name: Setup Terraform
-  #       uses: hashicorp/setup-terraform@v3
-  #       with:
-  #         terraform_version: 1.14.2
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.14.2
 
-  #     - name: Load and merge provisioning manifest
-  #       run: |
-  #         set -e
+      - name: Load and merge provisioning manifest
+        run: |
+          set -e
 
-  #         # Fetch existing manifest (if any)
-  #         if aws s3 ls "s3://${{ secrets.AWS_TF_STATE_FILE_BUCKET }}/${{ secrets.AWS_TF_STATE_MANIFEST_FILE_PATH }}" > /dev/null 2>&1; then
-  #           aws s3 cp "s3://${{ secrets.AWS_TF_STATE_FILE_BUCKET }}/${{ secrets.AWS_TF_STATE_MANIFEST_FILE_PATH }}" old.json
-  #         else
-  #           echo "[]" > old.json
-  #         fi
+          # Fetch existing manifest (if any)
+          if aws s3 ls "s3://${{ secrets.AWS_TF_STATE_FILE_BUCKET }}/${{ secrets.AWS_TF_STATE_MANIFEST_FILE_PATH }}" > /dev/null 2>&1; then
+            aws s3 cp "s3://${{ secrets.AWS_TF_STATE_FILE_BUCKET }}/${{ secrets.AWS_TF_STATE_MANIFEST_FILE_PATH }}" old.json
+          else
+            echo "[]" > old.json
+          fi
 
-  #         # Incoming UI manifest (delta)
-  #         echo '${{ toJson(github.event.client_payload.manifest) }}' > new.json
+          # Incoming UI manifest (delta)
+          echo '${{ toJson(github.event.client_payload.manifest) }}' > new.json
 
-  #         # Merge (append-only by design)
-  #         jq -s '.[0] + .[1]' old.json new.json > merged.json
+          # Merge (append-only by design)
+          jq -s '.[0] + .[1]' old.json new.json > merged.json
 
-  #         # Persist merged manifest
-  #         aws s3 cp merged.json "s3://${{ secrets.AWS_TF_STATE_FILE_BUCKET }}/${{ secrets.AWS_TF_STATE_MANIFEST_FILE_PATH }}"
+          # Persist merged manifest
+          aws s3 cp merged.json "s3://${{ secrets.AWS_TF_STATE_FILE_BUCKET }}/${{ secrets.AWS_TF_STATE_MANIFEST_FILE_PATH }}"
 
-  #         # Generate terraform variables
-  #         cat <<EOF > terraform.tfvars.json
-  #         {
-  #           "ui_manifest": $(cat merged.json)
-  #         }
-  #         EOF
+          # Generate terraform variables
+          cat <<EOF > terraform.tfvars.json
+          {
+            "ui_manifest": $(cat merged.json)
+          }
+          EOF
 
-  #     - name: Initialize Terraform
-  #       run: |
-  #         terraform init \
-  #           -backend-config="bucket=${{ secrets.AWS_TF_STATE_FILE_BUCKET }}" \
-  #           -backend-config="key=${{ secrets.AWS_TF_STATE_FILE_PATH }}" \
-  #           -backend-config="region=${{ secrets.AWS_REGION_NAME }}" \
-  #           -backend-config="encrypt=true"
+      - name: Initialize Terraform
+        run: |
+          terraform init \
+            -backend-config="bucket=${{ secrets.AWS_TF_STATE_FILE_BUCKET }}" \
+            -backend-config="key=${{ secrets.AWS_TF_STATE_FILE_PATH }}" \
+            -backend-config="region=${{ secrets.AWS_REGION_NAME }}" \
+            -backend-config="encrypt=true"
 
-  #     - name: Terraform Action Apply
-  #       run: terraform apply -auto-approve
+      - name: Terraform Action Apply
+        run: terraform apply -auto-approve
 
-  #     - name: Export Terraform outputs
-  #       id: tf_outputs
-  #       run: |
-  #         SERVICE_INVENTORY=$(terraform output -json service_inventory)
-  #         MAP_DOMAIN_INVENTORY=$(terraform output -json map_domain_inventory)
+      - name: Export Terraform outputs
+        id: tf_outputs
+        run: |
+          SERVICE_INVENTORY=$(terraform output -json service_inventory)
+          MAP_DOMAIN_INVENTORY=$(terraform output -json map_domain_inventory)
 
-  #         echo "service_inventory=$SERVICE_INVENTORY" >> $GITHUB_OUTPUT
-  #         echo "map_domain_inventory=$MAP_DOMAIN_INVENTORY" >> $GITHUB_OUTPUT
+          echo "service_inventory=$SERVICE_INVENTORY" >> $GITHUB_OUTPUT
+          echo "map_domain_inventory=$MAP_DOMAIN_INVENTORY" >> $GITHUB_OUTPUT
 
 
-  #     - name: Identify Requested Services
-  #       id: service_check
-  #       run: |
-  #         ATTACH_RUNNER_REQ=$(jq '[.ui_manifest[].subnets[].resources[] | select(.type=="EC2").instances[].services[] | select(. == "Self-Hosted-Runner")] | length > 0' terraform.tfvars.json)
-  #         NGINX_REQ=$(jq '[.ui_manifest[].subnets[].resources[] | select(.type=="EC2").instances[].services[] | select(. == "NGINX")] | length > 0' terraform.tfvars.json)
-  #         MAP_DOMAIN=$(jq '[.ui_manifest[].subnets[].resources[] | select(.type=="EC2").instances[].services[] | select(. == "Map Domain")] | length > 0' terraform.tfvars.json)
-  #         DOCKER_REQ=$(jq '[.ui_manifest[].subnets[].resources[] | select(.type=="EC2").instances[].services[] | select(. == "Docker")] | length > 0' terraform.tfvars.json)
-  #         MINIKUBE_REQ=$(jq '[.ui_manifest[].subnets[].resources[] | select(.type=="EC2").instances[].services[] | select(. == "MiniKube")] | length > 0' terraform.tfvars.json)
+      - name: Identify Requested Services
+        id: service_check
+        run: |
+          ATTACH_RUNNER_REQ=$(jq '[.ui_manifest[].subnets[].resources[] | select(.type=="EC2").instances[].services[] | select(. == "Self-Hosted-Runner")] | length > 0' terraform.tfvars.json)
+          NGINX_REQ=$(jq '[.ui_manifest[].subnets[].resources[] | select(.type=="EC2").instances[].services[] | select(. == "NGINX")] | length > 0' terraform.tfvars.json)
+          MAP_DOMAIN=$(jq '[.ui_manifest[].subnets[].resources[] | select(.type=="EC2").instances[].services[] | select(. == "Map Domain")] | length > 0' terraform.tfvars.json)
+          DOCKER_REQ=$(jq '[.ui_manifest[].subnets[].resources[] | select(.type=="EC2").instances[].services[] | select(. == "Docker")] | length > 0' terraform.tfvars.json)
+          MINIKUBE_REQ=$(jq '[.ui_manifest[].subnets[].resources[] | select(.type=="EC2").instances[].services[] | select(. == "MiniKube")] | length > 0' terraform.tfvars.json)
           
-  #         echo "attach_runner=$ATTACH_RUNNER_REQ" >> $GITHUB_OUTPUT
-  #         echo "run_nginx=$NGINX_REQ" >> $GITHUB_OUTPUT
-  #         echo "map_domain=$MAP_DOMAIN" >> $GITHUB_OUTPUT
-  #         echo "run_docker=$DOCKER_REQ" >> $GITHUB_OUTPUT
-  #         echo "run_minikube=$MINIKUBE_REQ" >> $GITHUB_OUTPUT
+          echo "attach_runner=$ATTACH_RUNNER_REQ" >> $GITHUB_OUTPUT
+          echo "run_nginx=$NGINX_REQ" >> $GITHUB_OUTPUT
+          echo "map_domain=$MAP_DOMAIN" >> $GITHUB_OUTPUT
+          echo "run_docker=$DOCKER_REQ" >> $GITHUB_OUTPUT
+          echo "run_minikube=$MINIKUBE_REQ" >> $GITHUB_OUTPUT
 
-  # # ----------------------------------------------------
-  # #             SELF HOSTED RUNNER
-  # # ----------------------------------------------------
+  # ----------------------------------------------------
+  #             SELF HOSTED RUNNER
+  # ----------------------------------------------------
 
-  # hosting_runner:
-  #   name: Hosting new runner
-  #   needs: resource_provision
-  #   runs-on: ubuntu-latest
-  #   if: needs.resource_provision.outputs.attach_runner == 'true'
-  #   defaults:
-  #     run:
-  #       working-directory: ansible/self-hosted-runner
+  hosting_runner:
+    name: Hosting new runner
+    needs: resource_provision
+    runs-on: ubuntu-latest
+    if: needs.resource_provision.outputs.attach_runner == 'true'
+    defaults:
+      run:
+        working-directory: ansible/self-hosted-runner
 
-  #   steps:
-  #     - name: Setup AWS Credentials
-  #       uses: aws-actions/configure-aws-credentials@v4
-  #       with:
-  #         aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-  #         aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-  #         aws-region: ${{ secrets.AWS_REGION_NAME }}
+    steps:
+      - name: Setup AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION_NAME }}
 
-  #     - name: Checkout repo
-  #       uses: actions/checkout@v4
+      - name: Checkout repo
+        uses: actions/checkout@v4
 
-  #     - name: Setup Python
-  #       uses: actions/setup-python@v5
-  #       with:
-  #         python-version: "3.12"
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
 
-  #     - name: Install Ansible + Boto
-  #       run: pip install ansible boto3 botocore
+      - name: Install Ansible + Boto
+        run: pip install ansible boto3 botocore
 
-  #     - name: Create Vault Password File
-  #       run: |
-  #         echo "${{ secrets.VAULT_PASSWORD }}" > .vault_pass
-  #         chmod 600 .vault_pass
+      - name: Create Vault Password File
+        run: |
+          echo "${{ secrets.VAULT_PASSWORD }}" > .vault_pass
+          chmod 600 .vault_pass
 
-  #     - name: Generate GitHub App Token
-  #       id: app_token
-  #       uses: actions/create-github-app-token@v1
-  #       with:
-  #         app-id: ${{ secrets.GH_APP_ID }}
-  #         private-key: ${{ secrets.GH_APP_PRIVATE_KEY }}
+      - name: Generate GitHub App Token
+        id: app_token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ secrets.GH_APP_ID }}
+          private-key: ${{ secrets.GH_APP_PRIVATE_KEY }}
           
-  #     - name: Create and Attach Runner
-  #       id: ansible_step
-  #       run: |
+      - name: Create and Attach Runner
+        id: ansible_step
+        run: |
 
-  #         IDS=$(echo '${{ needs.resource_provision.outputs.service_inventory }}' | jq -r '."Self-Hosted-Runner"')          
+          IDS=$(echo '${{ needs.resource_provision.outputs.service_inventory }}' | jq -r '."Self-Hosted-Runner"')          
           
-  #         ansible-playbook \
-  #           -i "$IDS," \
-  #           runner.yaml --vault-password-file .vault_pass \
-  #           -e "GITHUB_TOKEN=${{ steps.app_token.outputs.token }}" \
-  #           -e "REPO_URL=${{ github.server_url }}/${{ github.repository }}"
-  #       env:
-  #         ANSIBLE_CONFIG: "../ansible.cfg"
-  #         ANSIBLE_HOST_KEY_CHECKING: "False"
+          ansible-playbook \
+            -i "$IDS," \
+            runner.yaml --vault-password-file .vault_pass \
+            -e "GITHUB_TOKEN=${{ steps.app_token.outputs.token }}" \
+            -e "REPO_URL=${{ github.server_url }}/${{ github.repository }}"
+        env:
+          ANSIBLE_CONFIG: "../ansible.cfg"
+          ANSIBLE_HOST_KEY_CHECKING: "False"
 
-  #     - name: Update secrets in AWS Secrets Manager
-  #       run: python3 ../../secretsManager.py
-  #       env:
-  #         AWS_REGION: ${{ secrets.AWS_REGION_NAME }}
-  #         SECRET_FILE_NAME: ${{ steps.ansible_step.outputs.SECRETS_FILE_NAME }}
-  #         ACTION_TYPE: "CREATE_NEW_RUNNER"
-  #         SELF_HOSTED_RUNNER: ${{ steps.ansible_step.outputs.RUNNER_HOST }}
+      - name: Update secrets in AWS Secrets Manager
+        run: python3 ../../secretsManager.py
+        env:
+          AWS_REGION: ${{ secrets.AWS_REGION_NAME }}
+          SECRET_FILE_NAME: ${{ steps.ansible_step.outputs.SECRETS_FILE_NAME }}
+          ACTION_TYPE: "CREATE_NEW_RUNNER"
+          SELF_HOSTED_RUNNER: ${{ steps.ansible_step.outputs.RUNNER_HOST }}
 
-  #     - name: Clean Password File
-  #       if: always()
-  #       run: rm -f .vault_pass
+      - name: Clean Password File
+        if: always()
+        run: rm -f .vault_pass
 
-  # # ----------------------------------------------------
-  # #             PACKAGE INSTALLATION
-  # # ----------------------------------------------------
+  # ----------------------------------------------------
+  #             PACKAGE INSTALLATION
+  # ----------------------------------------------------
 
-  # # NGINX
-  # install_nginx:
-  #   name: Installing NGINX
-  #   needs: resource_provision
-  #   runs-on: ubuntu-latest
-  #   if: needs.resource_provision.outputs.run_nginx == 'true'
-  #   defaults:
-  #     run:
-  #       working-directory: ansible/nginx
+  # NGINX
+  install_nginx:
+    name: Installing NGINX
+    needs: resource_provision
+    runs-on: ubuntu-latest
+    if: needs.resource_provision.outputs.run_nginx == 'true'
+    defaults:
+      run:
+        working-directory: ansible/nginx
 
-  #   steps:
-  #     - name: Setup AWS Credentials
-  #       uses: aws-actions/configure-aws-credentials@v4
-  #       with:
-  #         aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-  #         aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-  #         aws-region: ${{ secrets.AWS_REGION_NAME }}
+    steps:
+      - name: Setup AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION_NAME }}
 
-  #     - name: Checkout repo
-  #       uses: actions/checkout@v4
+      - name: Checkout repo
+        uses: actions/checkout@v4
 
-  #     - name: Setup Python
-  #       uses: actions/setup-python@v5
-  #       with:
-  #         python-version: "3.12"
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
 
-  #     - name: Install Ansible + Boto
-  #       run: pip install ansible boto3 botocore
+      - name: Install Ansible + Boto
+        run: pip install ansible boto3 botocore
 
-  #     - name: Create Vault Password File
-  #       run: |
-  #         echo "${{ secrets.VAULT_PASSWORD }}" > .vault_pass
-  #         chmod 600 .vault_pass
+      - name: Create Vault Password File
+        run: |
+          echo "${{ secrets.VAULT_PASSWORD }}" > .vault_pass
+          chmod 600 .vault_pass
 
-  #     - name: Install NGINX Server
-  #       run: |
+      - name: Install NGINX Server
+        run: |
 
-  #         IDS=$(echo '${{ needs.resource_provision.outputs.service_inventory }}' | jq -r '.NGINX')
+          IDS=$(echo '${{ needs.resource_provision.outputs.service_inventory }}' | jq -r '.NGINX')
           
-  #         ansible-playbook \
-  #           -i "$IDS," \
-  #           nginx.yaml --vault-password-file .vault_pass
-  #       env:
-  #         ANSIBLE_CONFIG: "../ansible.cfg"
-  #         ANSIBLE_HOST_KEY_CHECKING: "False"
+          ansible-playbook \
+            -i "$IDS," \
+            nginx.yaml --vault-password-file .vault_pass
+        env:
+          ANSIBLE_CONFIG: "../ansible.cfg"
+          ANSIBLE_HOST_KEY_CHECKING: "False"
 
-  #     - name: Clean Password File
-  #       if: always()
-  #       run: rm -f .vault_pass
+      - name: Clean Password File
+        if: always()
+        run: rm -f .vault_pass
   
-  # # DOCKER
-  # install_docker:
-  #   name: Installing Docker
-  #   needs: resource_provision
-  #   runs-on: ubuntu-latest
-  #   if: needs.resource_provision.outputs.run_docker == 'true'
-  #   defaults:
-  #     run:
-  #       working-directory: ansible/docker
+  # DOCKER
+  install_docker:
+    name: Installing Docker
+    needs: resource_provision
+    runs-on: ubuntu-latest
+    if: needs.resource_provision.outputs.run_docker == 'true'
+    defaults:
+      run:
+        working-directory: ansible/docker
 
-  #   steps:
-  #     - name: Setup AWS Credentials
-  #       uses: aws-actions/configure-aws-credentials@v4
-  #       with:
-  #         aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-  #         aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-  #         aws-region: ${{ secrets.AWS_REGION_NAME }}
+    steps:
+      - name: Setup AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION_NAME }}
           
-  #     - name: Checkout repo
-  #       uses: actions/checkout@v4
+      - name: Checkout repo
+        uses: actions/checkout@v4
 
-  #     - name: Setup Python
-  #       uses: actions/setup-python@v5
-  #       with:
-  #         python-version: "3.12"
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
 
-  #     - name: Install Ansible + Boto
-  #       run: pip install ansible boto3 botocore
+      - name: Install Ansible + Boto
+        run: pip install ansible boto3 botocore
 
-  #     - name: Create Vault Password File
-  #       run: |
-  #         echo "${{ secrets.VAULT_PASSWORD }}" > .vault_pass
-  #         chmod 600 .vault_pass
+      - name: Create Vault Password File
+        run: |
+          echo "${{ secrets.VAULT_PASSWORD }}" > .vault_pass
+          chmod 600 .vault_pass
 
-  #     - name: Install Docker Service
-  #       run: |
+      - name: Install Docker Service
+        run: |
 
-  #         IDS=$(echo '${{ needs.resource_provision.outputs.service_inventory }}' | jq -r '.Docker')
+          IDS=$(echo '${{ needs.resource_provision.outputs.service_inventory }}' | jq -r '.Docker')
           
-  #         ansible-playbook \
-  #           -i "$IDS," \
-  #           docker.yaml --vault-password-file .vault_pass
-  #       env:
-  #         ANSIBLE_CONFIG: "../ansible.cfg"
-  #         ANSIBLE_HOST_KEY_CHECKING: "False"
+          ansible-playbook \
+            -i "$IDS," \
+            docker.yaml --vault-password-file .vault_pass
+        env:
+          ANSIBLE_CONFIG: "../ansible.cfg"
+          ANSIBLE_HOST_KEY_CHECKING: "False"
 
-  #     - name: Clean Password File
-  #       if: always()
-  #       run: rm -f .vault_pass
+      - name: Clean Password File
+        if: always()
+        run: rm -f .vault_pass
 
-  # # ----------------------------------------------------
-  # #             DOMAIN MAPPING
-  # # ----------------------------------------------------
+  # ----------------------------------------------------
+  #             DOMAIN MAPPING
+  # ----------------------------------------------------
   
-  # # DNS
-  # dns_mapping:
-  #   name: Map DNS
-  #   needs: [resource_provision]
-  #   runs-on: ubuntu-latest
-  #   if: needs.resource_provision.outputs.map_domain == 'true'
-  #   defaults:
-  #     run:
-  #       working-directory: ansible/nginx/config
+  # DNS
+  dns_mapping:
+    name: Map DNS
+    needs: [resource_provision]
+    runs-on: ubuntu-latest
+    if: needs.resource_provision.outputs.map_domain == 'true'
+    defaults:
+      run:
+        working-directory: ansible/nginx/config
 
-  #   steps:
-  #     - name: Setup AWS Credentials
-  #       uses: aws-actions/configure-aws-credentials@v4
-  #       with:
-  #         aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-  #         aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-  #         aws-region: ${{ secrets.AWS_REGION_NAME }}
+    steps:
+      - name: Setup AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION_NAME }}
 
-  #     - name: Checkout repo
-  #       uses: actions/checkout@v4
+      - name: Checkout repo
+        uses: actions/checkout@v4
 
-  #     - name: Setup Python
-  #       uses: actions/setup-python@v5
-  #       with:
-  #         python-version: "3.12"
-  #         check-latest: true
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          check-latest: true
 
-  #     - name: Install Ansible + Boto
-  #       run: pip install ansible boto3 botocore
+      - name: Install Ansible + Boto
+        run: pip install ansible boto3 botocore
 
-  #     - name: Create Vault Password File
-  #       run: |
-  #         echo "${{ secrets.VAULT_PASSWORD }}" > .vault_pass
-  #         chmod 600 .vault_pass
+      - name: Create Vault Password File
+        run: |
+          echo "${{ secrets.VAULT_PASSWORD }}" > .vault_pass
+          chmod 600 .vault_pass
 
-  #     - name: Configure DNS Mapping
-  #       run: |
+      - name: Configure DNS Mapping
+        run: |
 
-  #         IDS=$(echo '${{ needs.resource_provision.outputs.map_domain_inventory }}' | jq -r '.[].instance_id' | paste -sd "," -)
-  #         DNS_PAYLOAD=$(echo '${{ needs.resource_provision.outputs.map_domain_inventory }}' | jq -c '.')
+          IDS=$(echo '${{ needs.resource_provision.outputs.map_domain_inventory }}' | jq -r '.[].instance_id' | paste -sd "," -)
+          DNS_PAYLOAD=$(echo '${{ needs.resource_provision.outputs.map_domain_inventory }}' | jq -c '.')
 
-  #         ansible-playbook \
-  #           -i "$IDS," \
-  #           dns_mapping.yaml --vault-password-file .vault_pass \
-  #           -e "dns_instances=$DNS_PAYLOAD"
-  #       env:
-  #         ANSIBLE_HOST_KEY_CHECKING: "False"
+          ansible-playbook \
+            -i "$IDS," \
+            dns_mapping.yaml --vault-password-file .vault_pass \
+            -e "dns_instances=$DNS_PAYLOAD"
+        env:
+          ANSIBLE_HOST_KEY_CHECKING: "False"
 
-  #     - name: Clean Password File
-  #       if: always()
-  #       run: rm -f .vault_pass
+      - name: Clean Password File
+        if: always()
+        run: rm -f .vault_pass
   
-  # # NGINX
-  # configure_nginx:
-  #   name: Configuring NGINX
-  #   needs: [resource_provision, install_nginx]
-  #   runs-on: ubuntu-latest
-  #   if: needs.resource_provision.outputs.map_domain == 'true'
-  #   defaults:
-  #     run:
-  #       working-directory: ansible/nginx/config
+  # NGINX
+  configure_nginx:
+    name: Configuring NGINX
+    needs: [resource_provision, install_nginx]
+    runs-on: ubuntu-latest
+    if: needs.resource_provision.outputs.map_domain == 'true'
+    defaults:
+      run:
+        working-directory: ansible/nginx/config
 
-  #   steps:
-  #     - name: Setup AWS Credentials
-  #       uses: aws-actions/configure-aws-credentials@v4
-  #       with:
-  #         aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-  #         aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-  #         aws-region: ${{ secrets.AWS_REGION_NAME }}
+    steps:
+      - name: Setup AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION_NAME }}
 
-  #     - name: Checkout repo
-  #       uses: actions/checkout@v4
+      - name: Checkout repo
+        uses: actions/checkout@v4
 
-  #     - name: Setup Python
-  #       uses: actions/setup-python@v5
-  #       with:
-  #         python-version: "3.12"
-  #         check-latest: true
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          check-latest: true
 
-  #     - name: Install Ansible + Boto
-  #       run: pip install ansible boto3 botocore
+      - name: Install Ansible + Boto
+        run: pip install ansible boto3 botocore
 
-  #     - name: Create Vault Password File
-  #       run: |
-  #         echo "${{ secrets.VAULT_PASSWORD }}" > .vault_pass
-  #         chmod 600 .vault_pass
+      - name: Create Vault Password File
+        run: |
+          echo "${{ secrets.VAULT_PASSWORD }}" > .vault_pass
+          chmod 600 .vault_pass
 
-  #     - name: Configure NGINX Server
-  #       run: |
+      - name: Configure NGINX Server
+        run: |
 
-  #         IDS=$(echo '${{ needs.resource_provision.outputs.map_domain_inventory }}' | jq -r '.[].instance_id' | paste -sd "," -)
+          IDS=$(echo '${{ needs.resource_provision.outputs.map_domain_inventory }}' | jq -r '.[].instance_id' | paste -sd "," -)
 
-  #         DNS_PAYLOAD=$(echo '${{ needs.resource_provision.outputs.map_domain_inventory }}' | jq -c '.')
+          DNS_PAYLOAD=$(echo '${{ needs.resource_provision.outputs.map_domain_inventory }}' | jq -c '.')
           
-  #         ansible-playbook \
-  #           -i "$IDS," \
-  #           nginx_configuration.yaml --vault-password-file .vault_pass \
-  #           -e "dns_instances=$DNS_PAYLOAD"
-  #       env:
-  #         ANSIBLE_HOST_KEY_CHECKING: "False"
+          ansible-playbook \
+            -i "$IDS," \
+            nginx_configuration.yaml --vault-password-file .vault_pass \
+            -e "dns_instances=$DNS_PAYLOAD"
+        env:
+          ANSIBLE_HOST_KEY_CHECKING: "False"
 
-  #     - name: Clean Password File
-  #       if: always()
-  #       run: rm -f .vault_pass
+      - name: Clean Password File
+        if: always()
+        run: rm -f .vault_pass
   
-  # # SSL
-  # ssl_certified:
-  #   name: Obtain SSL certificate using Certbot
-  #   needs: [resource_provision, configure_nginx]
-  #   runs-on: ubuntu-latest
-  #   if: needs.resource_provision.outputs.map_domain == 'true'
-  #   defaults:
-  #     run:
-  #       working-directory: ansible/nginx/config
+  # SSL
+  ssl_certified:
+    name: Obtain SSL certificate using Certbot
+    needs: [resource_provision, configure_nginx]
+    runs-on: ubuntu-latest
+    if: needs.resource_provision.outputs.map_domain == 'true'
+    defaults:
+      run:
+        working-directory: ansible/nginx/config
 
-  #   steps:
-  #     - name: Setup AWS Credentials
-  #       uses: aws-actions/configure-aws-credentials@v4
-  #       with:
-  #         aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-  #         aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-  #         aws-region: ${{ secrets.AWS_REGION_NAME }}
+    steps:
+      - name: Setup AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION_NAME }}
 
-  #     - name: Checkout repo
-  #       uses: actions/checkout@v4
+      - name: Checkout repo
+        uses: actions/checkout@v4
 
-  #     - name: Setup Python
-  #       uses: actions/setup-python@v5
-  #       with:
-  #         python-version: "3.12"
-  #         check-latest: true
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          check-latest: true
 
-  #     - name: Install Ansible + Boto
-  #       run: pip install ansible boto3 botocore
+      - name: Install Ansible + Boto
+        run: pip install ansible boto3 botocore
 
-  #     - name: Create Vault Password File
-  #       run: |
-  #         echo "${{ secrets.VAULT_PASSWORD }}" > .vault_pass
-  #         chmod 600 .vault_pass
+      - name: Create Vault Password File
+        run: |
+          echo "${{ secrets.VAULT_PASSWORD }}" > .vault_pass
+          chmod 600 .vault_pass
 
-  #     - name: Get SSL Certificate
-  #       run: |
+      - name: Get SSL Certificate
+        run: |
 
-  #         IDS=$(echo '${{ needs.resource_provision.outputs.map_domain_inventory }}' | jq -r '.[].instance_id' | paste -sd "," -)
+          IDS=$(echo '${{ needs.resource_provision.outputs.map_domain_inventory }}' | jq -r '.[].instance_id' | paste -sd "," -)
 
-  #         DNS_PAYLOAD=$(echo '${{ needs.resource_provision.outputs.map_domain_inventory }}' | jq -c '.')
+          DNS_PAYLOAD=$(echo '${{ needs.resource_provision.outputs.map_domain_inventory }}' | jq -c '.')
           
-  #         ansible-playbook \
-  #           -i "$IDS," \
-  #           ssl_certified.yaml --vault-password-file .vault_pass \
-  #           -e "dns_instances=$DNS_PAYLOAD"
-  #       env:
-  #         ANSIBLE_HOST_KEY_CHECKING: "False"
+          ansible-playbook \
+            -i "$IDS," \
+            ssl_certified.yaml --vault-password-file .vault_pass \
+            -e "dns_instances=$DNS_PAYLOAD"
+        env:
+          ANSIBLE_HOST_KEY_CHECKING: "False"
 
-  #     - name: Clean Password File
-  #       if: always()
-  #       run: rm -f .vault_pass
+      - name: Clean Password File
+        if: always()
+        run: rm -f .vault_pass
 
-  # # ----------------------------------------------------
-  # #             STARTUP SERVICES
-  # # ----------------------------------------------------
+  # ----------------------------------------------------
+  #             STARTUP SERVICES
+  # ----------------------------------------------------
   
-  # # DOCKER
-  # startup_service_docker:
+  # DOCKER
+  startup_service_docker:
   #   name: Run docker containers on startup
   #   needs: [resource_provision, install_docker]
   #   runs-on: ubuntu-latest
