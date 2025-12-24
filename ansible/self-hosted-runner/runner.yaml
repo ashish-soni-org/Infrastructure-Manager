@@ -95,7 +95,8 @@
       ansible.builtin.shell: |
         echo "RUNNER_HOST={{ inventory_hostname }}" >> $GITHUB_OUTPUT
         echo "SECRETS_FILE_NAME={{ SECRETS_FILE_NAME }}" >> $GITHUB_OUTPUT
-      delegate_to: localhost
+      vars:
+        ansible_connection: local
       run_once: true
 
 
