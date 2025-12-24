@@ -508,7 +508,7 @@ jobs:
           app-id: ${{ secrets.GH_APP_ID }}
           private-key: ${{ secrets.GH_APP_PRIVATE_KEY }}
           owner: ashish-soni-org
-          repositories: Full-Project
+          repositories: Vehicle-Insurance-Eligibility-Prediction
 
       - name: Check Permissions
         run: |
