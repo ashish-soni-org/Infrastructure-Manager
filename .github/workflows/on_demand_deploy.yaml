@@ -1,0 +1,13 @@
+name: Deploy Application Docker Image to EC2 instance
+
+on:
+  repository_dispatch:
+    types: [event-on-demand-deploy]
+
+jobs:
+  verify_logging:
+    name: Hello World Log Check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Print Hello World to Logs
+        run: echo "Hello World - CI/CD Log Verification Successful"
