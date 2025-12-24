@@ -11,6 +11,7 @@
     ansible_aws_ssm_bucket_name: "{{ ANSIBLE_AWS_SSM_BUCKET_NAME }}"
     ansible_aws_ssm_region: "{{ ANSIBLE_AWS_SSM_REGION }}"
     runner_base_path: "/home/ubuntu/actions-runner"
+    python_file: /opt/scripts/secretsManager.py
 
   tasks:
     - name: Wait for connection
@@ -94,11 +95,11 @@
     - name: Copy secretsManager.py to instance
       ansible.builtin.copy:
         src: ../../secretsManager.py
-        dest: /opt/scripts/secretsManager.py
+        dest: "{{ python_file }}"
         mode: "0755"
 
     - name: Run Python script with env
-      ansible.builtin.command: python3 /opt/scripts/secretsManager.py
+      ansible.builtin.command: python3 "{{ python_file }}"
       environment:
         AWS_REGION: "{{ ANSIBLE_AWS_SSM_REGION }}"
         SECRET_FILE_NAME: "{{ SECRETS_FILE_NAME }}"
