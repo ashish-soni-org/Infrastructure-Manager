@@ -17,91 +17,96 @@
       ansible.builtin.wait_for_connection:
         timeout: 300
         
-    # - name: Install dependencies for runner
-    #   ansible.builtin.apt:
-    #     name: ['curl', 'jq', 'git']
-    #     state: present
-    #   when: ansible_os_family == "Debian"
+    - name: Install dependencies for runner
+      ansible.builtin.apt:
+        name: ['curl', 'jq', 'git']
+        state: present
+      when: ansible_os_family == "Debian"
 
-    # - name: Create runner directory
-    #   ansible.builtin.file:
-    #     path: "{{ runner_base_path }}"
-    #     state: directory
-    #     owner: "{{ ansible_user }}"
-    #     mode: '777'
+    - name: Create runner directory
+      ansible.builtin.file:
+        path: "{{ runner_base_path }}"
+        state: directory
+        owner: "{{ ansible_user }}"
+        mode: '777'
 
-    # - name: Download the latest runner package
-    #   ansible.builtin.get_url:
-    #     url: https://github.com/actions/runner/releases/download/v2.316.0/actions-runner-linux-x64-2.316.0.tar.gz 
-    #     dest: "{{ runner_base_path }}/actions-runner-linux-x64.tar.gz"
-    #     owner: "{{ ansible_user }}"
-    #     mode: '0644'
+    - name: Download the latest runner package
+      ansible.builtin.get_url:
+        url: https://github.com/actions/runner/releases/download/v2.316.0/actions-runner-linux-x64-2.316.0.tar.gz 
+        dest: "{{ runner_base_path }}/actions-runner-linux-x64.tar.gz"
+        owner: "{{ ansible_user }}"
+        mode: '0644'
 
-    # - name: Extract the runner package
-    #   ansible.builtin.unarchive:
-    #     src: "{{ runner_base_path }}/actions-runner-linux-x64.tar.gz"
-    #     dest: "{{ runner_base_path }}"
-    #     owner: "{{ ansible_user }}"
-    #     remote_src: true
+    - name: Extract the runner package
+      ansible.builtin.unarchive:
+        src: "{{ runner_base_path }}/actions-runner-linux-x64.tar.gz"
+        dest: "{{ runner_base_path }}"
+        owner: "{{ ansible_user }}"
+        remote_src: true
 
-    # - name: Get GitHub Organization Runner Registration Token
-    #   ansible.builtin.uri:
-    #     url: "{{ REPO_URL | regex_replace('https://github.com/([^/]+)/.*', 'https://api.github.com/orgs/\\1') }}/actions/runners/registration-token"
-    #     method: POST
-    #     headers:
-    #       Authorization: "Bearer {{ GITHUB_TOKEN }}"
-    #       Accept: "application/vnd.github+json"
-    #       X-GitHub-Api-Version: "2022-11-28"
-    #     status_code: 201
-    #     return_content: true
-    #   register: github_token_response
+    - name: Get GitHub Organization Runner Registration Token
+      ansible.builtin.uri:
+        url: "{{ REPO_URL | regex_replace('https://github.com/([^/]+)/.*', 'https://api.github.com/orgs/\\1') }}/actions/runners/registration-token"
+        method: POST
+        headers:
+          Authorization: "Bearer {{ GITHUB_TOKEN }}"
+          Accept: "application/vnd.github+json"
+          X-GitHub-Api-Version: "2022-11-28"
+        status_code: 201
+        return_content: true
+      register: github_token_response
 
-    # - name: Extract registration token
-    #   ansible.builtin.set_fact:
-    #     runner_token: "{{ github_token_response.json.token }}"
+    - name: Extract registration token
+      ansible.builtin.set_fact:
+        runner_token: "{{ github_token_response.json.token }}"
 
-    # - name: Configure the runner
-    #   ansible.builtin.shell: |
-    #     sudo -u ubuntu /bin/bash << EOF
-    #     cd "{{ runner_base_path }}"
-    #     ./config.sh \
-    #       --url "https://github.com/ashish-soni-org" \
-    #       --token {{ runner_token }} \
-    #       --runnergroup "Production_Runners"
-    #       self-hosted-runner-{{ inventory_hostname }}
-    #       linux,x64,aws,ec2
-    #       work_dir
-    #     EOF
-    #   args:
-    #     chdir: "{{ runner_base_path }}"
+    - name: Configure the runner
+      ansible.builtin.shell: |
+        sudo -u ubuntu /bin/bash << EOF
+        cd "{{ runner_base_path }}"
+        ./config.sh \
+          --url "https://github.com/ashish-soni-org" \
+          --token {{ runner_token }} \
+          --runnergroup "Production_Runners"
+          self-hosted-runner-{{ inventory_hostname }}
+          linux,x64,aws,ec2
+          work_dir
+        EOF
+      args:
+        chdir: "{{ runner_base_path }}"
 
-    # - name: Install and start the runner service
-    #   ansible.builtin.shell: |
-    #     sudo -u ubuntu /bin/bash << EOF
-    #     sudo ./svc.sh install
-    #     EOF
-    #   args:
-    #     chdir: "{{ runner_base_path }}"
+    - name: Install and start the runner service
+      ansible.builtin.shell: |
+        sudo -u ubuntu /bin/bash << EOF
+        sudo ./svc.sh install
+        EOF
+      args:
+        chdir: "{{ runner_base_path }}"
 
-    # - name: Enable and start runner service
-    #   become: true
-    #   ansible.builtin.systemd_service:
-    #     name: actions.runner.ashish-soni-org.self-hosted-runner-{{ inventory_hostname }}.service
-    #     daemon_reload: true
-    #     enabled: true
-        # state: started
+    - name: Enable and start runner service
+      become: true
+      ansible.builtin.systemd_service:
+        name: actions.runner.ashish-soni-org.self-hosted-runner-{{ inventory_hostname }}.service
+        daemon_reload: true
+        enabled: true
+        state: started
 
-    - name: Update secrets in AWS Secrets Manager
-      ansible.builtin.command: python3 ../../secretsManager.py
+    - name: Set Runner Hostname for GitHub Actions
+      ansible.builtin.shell: echo "RUNNER_HOST={{ inventory_hostname }}" >> $GITHUB_OUTPUT
       delegate_to: localhost
       run_once: true
-      vars:
-        ansible_connection: local
-      environment:
-        AWS_REGION: "{{ ANSIBLE_AWS_SSM_REGION }}"
-        SECRET_FILE_NAME: "{{ SECRETS_FILE_NAME }}"
-        ACTION_TYPE: "CREATE_NEW_RUNNER"
-        SELF_HOSTED_RUNNER: "Runner"
-        # SELF_HOSTED_RUNNER: "{{ inventory_hostname }}"
+
+    # - name: Update secrets in AWS Secrets Manager
+    #   ansible.builtin.command: python3 ../../secretsManager.py
+    #   delegate_to: localhost
+    #   run_once: true
+    #   vars:
+    #     ansible_connection: local
+    #   environment:
+    #     AWS_REGION: "{{ ANSIBLE_AWS_SSM_REGION }}"
+    #     SECRET_FILE_NAME: "{{ SECRETS_FILE_NAME }}"
+    #     ACTION_TYPE: "CREATE_NEW_RUNNER"
+    #     SELF_HOSTED_RUNNER: "Runner"
+    #     # SELF_HOSTED_RUNNER: "{{ inventory_hostname }}"
 
 

@@ -149,6 +149,7 @@ jobs:
           private-key: ${{ secrets.GH_APP_PRIVATE_KEY }}
           
       - name: Create and Attach Runner
+        id: ansible_step
         run: |
 
           IDS=$(echo '${{ needs.resource_provision.outputs.service_inventory }}' | jq -r '."Self-Hosted-Runner"')          
@@ -161,6 +162,15 @@ jobs:
         env:
           ANSIBLE_CONFIG: "../ansible.cfg"
           ANSIBLE_HOST_KEY_CHECKING: "False"
+
+      - name: Update secrets in AWS Secrets Manager
+        run: python3 ../secretsManager.py
+        env:
+          AWS_REGION: ${{ secrets.AWS_REGION_NAME }}
+          SECRET_FILE_NAME: hhh # Ensure this is in GH Secrets
+          ACTION_TYPE: "CREATE_NEW_RUNNER"
+          # Accessing the hostname passed back from Ansible
+          SELF_HOSTED_RUNNER: ${{ steps.ansible_step.outputs.RUNNER_HOST }}
 
       - name: Clean Password File
         if: always()
