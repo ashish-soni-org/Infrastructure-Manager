@@ -76,7 +76,7 @@ locals {
   # ---------------------------------------------------------------------------
   # STEP 5: Normalize S3 buckets (unique by key)
   # ---------------------------------------------------------------------------
-  s3_buckets = {
+  s3_buckets_grouped = {
     for item in flatten([
       for vpc_name, events in local.vpc_events : [
         for e in events : [
@@ -90,7 +90,12 @@ locals {
           ]
         ]
       ]
-    ]) : item.key => item
+    ]) : item.key => item...
+  }
+
+  s3_buckets = {
+    for k, items in local.s3_buckets_grouped :
+    k => items[length(items) - 1]
   }
 
   # ---------------------------------------------------------------------------
