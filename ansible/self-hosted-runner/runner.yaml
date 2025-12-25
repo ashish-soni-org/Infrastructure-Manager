@@ -7,45 +7,55 @@
     - ../secrets/secrets.yml
 
   vars:
-    ansible_connection: "{{ ANSIBLE_CONNECTION }}"
-    ansible_aws_ssm_bucket_name: "{{ ANSIBLE_AWS_SSM_BUCKET_NAME }}"
-    ansible_aws_ssm_region: "{{ ANSIBLE_AWS_SSM_REGION }}"
-    runner_base_path: "/home/ubuntu/actions-runner"
+    ansible_connection: "{{ ANSIBLE_CONNECTION | default('aws_ssm') }}"
+    ansible_aws_ssm_bucket_name: "{{ ANSIBLE_AWS_SSM_BUCKET_NAME | default('') }}"
+    ansible_aws_ssm_region: "{{ ANSIBLE_AWS_SSM_REGION | default('') }}"
+    
+    # Configuration Variables
+    runner_user: "ubuntu"
+    runner_base_path: "/home/{{ runner_user }}/actions-runner"
+    runner_version: "2.316.0"
+    runner_arch: "linux-x64"
 
   tasks:
     - name: Wait for connection
       ansible.builtin.wait_for_connection:
         timeout: 300
-        
+
     - name: Install dependencies for runner
       ansible.builtin.apt:
-        name: ['curl', 'jq', 'git']
+        name: ['curl', 'jq', 'git', 'tar', 'libdigest-sha-perl', 'libicu-dev']
         state: present
+        update_cache: yes
       when: ansible_os_family == "Debian"
 
     - name: Create runner directory
       ansible.builtin.file:
         path: "{{ runner_base_path }}"
         state: directory
-        owner: "{{ ansible_user }}"
-        mode: '777'
+        owner: "{{ runner_user }}"
+        group: "{{ runner_user }}"
+        mode: '0755'
 
     - name: Download the latest runner package
       ansible.builtin.get_url:
-        url: https://github.com/actions/runner/releases/download/v2.316.0/actions-runner-linux-x64-2.316.0.tar.gz 
-        dest: "{{ runner_base_path }}/actions-runner-linux-x64.tar.gz"
-        owner: "{{ ansible_user }}"
+        url: "https://github.com/actions/runner/releases/download/v{{ runner_version }}/actions-runner-{{ runner_arch }}-{{ runner_version }}.tar.gz"
+        dest: "{{ runner_base_path }}/actions-runner.tar.gz"
+        owner: "{{ runner_user }}"
+        group: "{{ runner_user }}"
         mode: '0644'
 
     - name: Extract the runner package
       ansible.builtin.unarchive:
-        src: "{{ runner_base_path }}/actions-runner-linux-x64.tar.gz"
+        src: "{{ runner_base_path }}/actions-runner.tar.gz"
         dest: "{{ runner_base_path }}"
-        owner: "{{ ansible_user }}"
+        owner: "{{ runner_user }}"
+        group: "{{ runner_user }}"
         remote_src: true
 
     - name: Get GitHub Organization Runner Registration Token
       ansible.builtin.uri:
+        # Regex extracts the organization name from the repo URL
         url: "{{ REPO_URL | regex_replace('https://github.com/([^/]+)/.*', 'https://api.github.com/orgs/\\1') }}/actions/runners/registration-token"
         method: POST
         headers:
@@ -60,46 +70,50 @@
       ansible.builtin.set_fact:
         runner_token: "{{ github_token_response.json.token }}"
 
-    - name: Configure the runner
-      ansible.builtin.shell: |
-        sudo -u ubuntu /bin/bash << EOF
-        cd "{{ runner_base_path }}"
-        ./config.sh \
-          --url "https://github.com/ashish-soni-org" \
-          --token {{ runner_token }} \
-          --runnergroup "Production_Runners"
-          self-hosted-runner-{{ inventory_hostname }}
-          linux,x64,aws,ec2
-          work_dir
-        EOF
-      args:
-        chdir: "{{ runner_base_path }}"
+    - name: Check if runner is already configured
+      ansible.builtin.stat:
+        path: "{{ runner_base_path }}/.runner"
+      register: runner_config_file
 
-    - name: Install and start the runner service
-      ansible.builtin.shell: |
-        sudo -u ubuntu /bin/bash << EOF
-        sudo ./svc.sh install
-        EOF
+    - name: Configure the runner
+      ansible.builtin.command:
+        cmd: >
+          ./config.sh
+          --url "https://github.com/{{ REPO_URL | regex_replace('https://github.com/([^/]+)/.*', '\\1') }}"
+          --token {{ runner_token }}
+          --runnergroup "Production_Runners"
+          --name "self-hosted-runner-{{ inventory_hostname }}"
+          --labels "linux,x64,aws,ec2"
+          --work "_work"
+          --unattended
+          --replace
       args:
         chdir: "{{ runner_base_path }}"
+      become_user: "{{ runner_user }}"
+      # Only run configuration if .runner file does not exist
+      when: not runner_config_file.stat.exists
+
+    - name: Install the runner service
+      ansible.builtin.command:
+        cmd: "./svc.sh install {{ runner_user }}"
+      args:
+        chdir: "{{ runner_base_path }}"
+      register: service_install
+      # Fail if error, but ignore if service already exists
+      failed_when: 
+        - service_install.rc != 0 
+        - "'already exists' not in service_install.stderr"
+      changed_when: "'already exists' not in service_install.stderr"
 
     - name: Enable and start runner service
-      become: true
-      ansible.builtin.systemd_service:
-        name: actions.runner.ashish-soni-org.self-hosted-runner-{{ inventory_hostname }}.service
-        daemon_reload: true
-        enabled: true
-        state: started
-
-    # - name: Set multiple outputs for GitHub Actions
-    #   ansible.builtin.shell: |
-    #     echo "RUNNER_HOST=self-hosted-runner-{{ inventory_hostname }}" >> "$GITHUB_OUTPUT"
-    #     echo "SECRETS_FILE_NAME={{ SECRETS_FILE_NAME }}" >> "$GITHUB_OUTPUT"
-    #   delegate_to: localhost
-    #   run_once: true
-    #   vars:
-    #     ansible_connection: local
-    #   environment:
-    #     GITHUB_OUTPUT: "{{ lookup('env', 'GITHUB_OUTPUT') }}"
-
-
+      ansible.builtin.command:
+        cmd: "./svc.sh start"
+      args:
+        chdir: "{{ runner_base_path }}"
+      register: service_start
+      # Fail if error, but ignore if already running
+      failed_when: 
+        - service_start.rc != 0 
+        - "'active' not in service_start.stdout"
+        - "'is running' not in service_start.stdout"
+      changed_when: "'active' not in service_start.stdout"
