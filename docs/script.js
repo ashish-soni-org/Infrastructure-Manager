@@ -12,7 +12,6 @@
             name: "production-vpc",
             subnets: [createDefaultSubnet("main-subnet")]
         }],
-        // Standalone services moved out of VPC/Subnet structure
         standalone: {
             S3: { enabled: false, count: 1, instances: [] },
             ECR: { enabled: false, count: 1, instances: [] }
@@ -39,6 +38,23 @@
         applyTheme(next);
     };
 
+    /* Tab Switching Logic */
+    const tabButtons = document.querySelectorAll(".tab-btn");
+    const tabContents = document.querySelectorAll(".tab-content");
+
+    tabButtons.forEach(btn => {
+        btn.addEventListener("click", () => {
+            // Remove active class from all
+            tabButtons.forEach(b => b.classList.remove("active"));
+            tabContents.forEach(c => c.classList.remove("active"));
+
+            // Add active to clicked
+            btn.classList.add("active");
+            const targetId = btn.getAttribute("data-target");
+            document.getElementById(targetId).classList.add("active");
+        });
+    });
+
     /* Data Logic */
 
     function createDefaultSubnet(name = "") {
@@ -46,7 +62,6 @@
             name: name,
             resources: {
                 EC2: { enabled: false, count: 1, instances: [] }
-                // S3 and ECR removed from subnet level
             }
         };
     }
@@ -78,7 +93,6 @@
                     count: r.count,
                     instances: r.instances.map(inst => ({
                         name: inst.name
-                        // Standalone services (S3/ECR) generally don't have "Compute Services" like Nginx/Docker
                     }))
                 }))
         };
@@ -110,7 +124,7 @@
         standaloneContainer.innerHTML = "";
         footerContainer.innerHTML = "";
 
-        // 1. Render VPCs
+        // 1. Render VPCs (Compute Tab)
         vpcCounterValue.textContent = state.vpcs.length;
         document.getElementById("vpcDecrementBtn").disabled = state.vpcs.length <= MIN;
         document.getElementById("vpcIncrementBtn").disabled = state.vpcs.length >= MAX;
@@ -148,23 +162,20 @@
             vpcContainer.appendChild(vpcCard);
         });
 
-        // 2. Render Standalone Services
+        // 2. Render Standalone Services (Global Services Tab)
         renderStandaloneServices();
 
-        // 3. Render Footer
+        // 3. Render Footer (Global)
         renderFooter();
         updateManifest();
     }
 
     function renderSubnetResources(subnet) {
-        // Handles EC2 inside Subnets
         const resCard = document.createElement("div");
         resCard.className = "resources-card";
-
         const chips = document.createElement("div");
         chips.className = "resource-chips";
         
-        // Only EC2 exists in subnet now
         ["EC2"].forEach(type => {
             const chip = document.createElement("div");
             chip.className = "chip" + (subnet.resources[type].enabled ? " active" : "");
@@ -172,7 +183,6 @@
             chip.onclick = () => { subnet.resources[type].enabled = !subnet.resources[type].enabled; render(); };
             chips.appendChild(chip);
         });
-
         resCard.append(chips);
 
         Object.entries(subnet.resources).forEach(([type, data]) => {
@@ -198,11 +208,9 @@
                 row.className = "row";
                 row.append(createLabel(`${idx + 1}. Name:`), createInput(inst.name, `${type}_${idx + 1}`, v => { inst.name = v; updateManifest(); }));
                 item.append(row);
-                // Compute services only for EC2
                 if (type === "EC2") item.appendChild(renderServicesCard(inst));
                 list.appendChild(item);
             });
-
             instCard.append(ctrl, list);
             resCard.appendChild(instCard);
         });
@@ -210,15 +218,18 @@
     }
 
     function renderStandaloneServices() {
-        const wrapper = document.createElement("div");
-        
-        // Chip selector for Standalone
-        const selectorCard = document.createElement("div");
-        selectorCard.className = "standalone-card";
+        const mainCard = document.createElement("div");
+        mainCard.className = "standalone-card"; 
+
+        // 1. Selector Chips Row 
         const selectorRow = document.createElement("div");
         selectorRow.className = "row";
         selectorRow.style.justifyContent = "center";
-        
+        selectorRow.style.gap = "15px";
+        selectorRow.style.paddingBottom = "15px";
+        selectorRow.style.borderBottom = "2px solid var(--border-strong)";
+        selectorRow.style.marginBottom = "20px";
+
         Object.keys(state.standalone).forEach(type => {
             const chip = document.createElement("div");
             chip.className = "chip" + (state.standalone[type].enabled ? " active" : "");
@@ -226,42 +237,64 @@
             chip.onclick = () => { state.standalone[type].enabled = !state.standalone[type].enabled; render(); };
             selectorRow.appendChild(chip);
         });
-        selectorCard.appendChild(selectorRow);
-        wrapper.appendChild(selectorCard);
+        mainCard.appendChild(selectorRow);
 
-        // Render Cards for enabled services
-        Object.entries(state.standalone).forEach(([type, data]) => {
-            if (!data.enabled) return;
-            ensureInstanceCount(data);
+        // 2. Render Cards for each Enabled Service
+        const activeServices = Object.entries(state.standalone).filter(([_, data]) => data.enabled);
+        
+        if (activeServices.length > 0) {
+            activeServices.forEach(([type, data]) => {
+                ensureInstanceCount(data);
 
-            const sCard = document.createElement("div");
-            sCard.className = "standalone-card";
-            
-            const ctrl = document.createElement("div");
-            ctrl.className = "row";
-            ctrl.append(
-                createLabel(`${type} Resources:`),
-                createCounterValue(data.count),
-                createButton("−", "btn-decrement", data.count <= MIN, () => { data.count--; render(); }),
-                createButton("+", "btn-increment", data.count >= MAX, () => { data.count++; render(); })
-            );
+                const serviceCard = document.createElement("div");
+                serviceCard.className = "subnet-card"; 
 
-            const list = document.createElement("div");
-            data.instances.forEach((inst, idx) => {
-                const item = document.createElement("div");
-                item.style.marginTop = "10px";
-                const row = document.createElement("div");
-                row.className = "row";
-                row.append(createLabel(`${idx + 1}. Name:`), createInput(inst.name, `${type}_Bucket_Or_Repo_${idx + 1}`, v => { inst.name = v; updateManifest(); }));
-                item.append(row);
-                list.appendChild(item);
+                const headerRow = document.createElement("div");
+                headerRow.className = "row";
+                headerRow.append(createLabel(`${type} Configuration`));
+                serviceCard.appendChild(headerRow);
+
+                const instanceCard = document.createElement("div");
+                instanceCard.className = "resource-instance-card";
+
+                const ctrl = document.createElement("div");
+                ctrl.className = "row";
+                ctrl.append(
+                    createLabel(`Count:`),
+                    createCounterValue(data.count),
+                    createButton("−", "btn-decrement", data.count <= MIN, () => { data.count--; render(); }),
+                    createButton("+", "btn-increment", data.count >= MAX, () => { data.count++; render(); })
+                );
+
+                const list = document.createElement("div");
+                data.instances.forEach((inst, idx) => {
+                    const item = document.createElement("div");
+                    item.style.marginTop = "10px";
+                    const row = document.createElement("div");
+                    row.className = "row";
+                    
+                    // --- UPDATED HINT LOGIC HERE ---
+                    const hint = type === "S3" ? "bucket-name" : "repo-name";
+                    // -------------------------------
+
+                    row.append(createLabel(`${idx + 1}. Name:`), createInput(inst.name, hint, v => { inst.name = v; updateManifest(); }));
+                    item.append(row);
+                    list.appendChild(item);
+                });
+
+                instanceCard.append(ctrl, list);
+                serviceCard.appendChild(instanceCard);
+                mainCard.appendChild(serviceCard);
             });
+        } else {
+             const emptyMsg = document.createElement("div");
+             emptyMsg.style.textAlign = "center";
+             emptyMsg.style.color = "var(--muted)";
+             emptyMsg.textContent = "Select a service above to configure resources.";
+             mainCard.appendChild(emptyMsg);
+        }
 
-            sCard.append(ctrl, list);
-            wrapper.appendChild(sCard);
-        });
-
-        standaloneContainer.appendChild(wrapper);
+        standaloneContainer.appendChild(mainCard);
     }
 
     function ensureInstanceCount(data) {
@@ -289,13 +322,11 @@
             };
             chipContainer.appendChild(chip);
         });
-
         sCard.append(chipContainer);
 
         if (instance.services.includes("Map Domain")) {
             const container = document.createElement("div");
             container.className = "domain-inputs-container";
-            
             const domainRow = document.createElement("div");
             domainRow.className = "row";
             domainRow.append(createLabel("Domain Name:"), createInput(instance.domainName, "example.com", v => { instance.domainName = v; updateManifest(); }));
@@ -333,11 +364,9 @@
         input.oninput = e => { state.token = e.target.value; updateManifest(); };
         inputGroup.appendChild(input);
 
-        // Provision Button
         const provBtnText = state.isProvisioning ? "Provisioning..." : "Provision";
         const provBtn = createButton(provBtnText, "btn-submit", state.isProvisioning || state.isDestroying, () => executeGitHubDispatch(generateManifest(), "apply"));
 
-        // Destroy Button
         const destBtnText = state.isDestroying ? "Destroying..." : "Destroy All";
         const destBtn = createButton(destBtnText, "btn-destroy", state.isProvisioning || state.isDestroying, () => {
             if(confirm("CRITICAL: This will destroy all resources in this state. Continue?")) {
@@ -349,15 +378,12 @@
         footerContainer.appendChild(card);
     }
 
-    /* Helper Functions */
-
     function createLabel(text) {
         const el = document.createElement("span");
         el.className = "label";
         el.textContent = text;
         return el;
     }
-
     function createInput(value, placeholder, onInput) {
         const el = document.createElement("input");
         el.className = "input";
@@ -366,14 +392,12 @@
         el.oninput = e => onInput(e.target.value);
         return el;
     }
-
     function createCounterValue(val) {
         const el = document.createElement("span");
         el.className = "counter-value";
         el.textContent = val;
         return el;
     }
-
     function createButton(text, className, disabled, onClick) {
         const b = document.createElement("button");
         b.className = `btn ${className}`;
@@ -382,8 +406,6 @@
         b.onclick = onClick;
         return b;
     }
-
-    /* Event Listeners & Init */
 
     document.getElementById("vpcIncrementBtn").onclick = () => { state.vpcs.push({ name: "", subnets: [createDefaultSubnet()] }); render(); };
     document.getElementById("vpcDecrementBtn").onclick = () => { state.vpcs.pop(); render(); };
@@ -399,10 +421,7 @@
 
     render();
 
-    /* ==========================================================================
-       CI/CD ORCHESTRATION LOGIC
-       ========================================================================== */
-
+    /* CI/CD LOGIC */
     const GITHUB_CONFIG = {
         OWNER: "ashish-soni-org", 
         REPO: "Terraform-Ansible",
@@ -412,14 +431,9 @@
 
     async function executeGitHubDispatch(manifest, action) {
         if (!state.token.trim()) return alert("Error: GitHub PAT is required.");
-
-        const eventType = action === "destroy" 
-            ? GITHUB_CONFIG.EVENT_TYPE_DESTROY 
-            : GITHUB_CONFIG.EVENT_TYPE_APPLY;
-
+        const eventType = action === "destroy" ? GITHUB_CONFIG.EVENT_TYPE_DESTROY : GITHUB_CONFIG.EVENT_TYPE_APPLY;
         if (action === "apply") state.isProvisioning = true;
         else state.isDestroying = true;
-        
         render();
 
         const API_URL = `https://api.github.com/repos/${GITHUB_CONFIG.OWNER}/${GITHUB_CONFIG.REPO}/dispatches`;
@@ -455,5 +469,4 @@
             render();
         }
     }
-
 })();
