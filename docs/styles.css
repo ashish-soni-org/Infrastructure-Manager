@@ -7,6 +7,7 @@ body[data-theme="dark"] {
     --vpc-bg: #030a24;
     --subnet-bg: #040d2f;
     --resource-bg: #060f3a;
+    --standalone-bg: #1e1b4b; /* Distinct background for standalone */
     --service-card-bg: #0f172a;
     --border: #1e293b;
     --border-strong: #334155;
@@ -25,6 +26,7 @@ body[data-theme="light"] {
     --vpc-bg: #eef2ff;
     --subnet-bg: #e0e7ff;
     --resource-bg: #dbeafe;
+    --standalone-bg: #f3e8ff; /* Distinct background for standalone */
     --service-card-bg: #ffffff;
     --border: #cbd5e1;
     --border-strong: #94a3b8;
@@ -52,7 +54,7 @@ body {
     background-color: var(--bg);
     color: var(--text);
     line-height: 1.5;
-    padding-bottom: 160px; /* Increased to accommodate larger token card */
+    padding-bottom: 160px;
 }
 
 /* =====================
@@ -126,6 +128,18 @@ body {
 .btn-reset { background-color: var(--neutral); color: var(--text); }
 .btn-submit { background-color: var(--submit); color: #ffffff; padding: 12px 32px; font-size: 1rem; }
 .btn-copy { background-color: var(--neutral); color: var(--text); font-size: 0.75rem; padding: 4px 12px; }
+.btn-destroy { 
+    background-color: var(--danger); 
+    color: #ffffff; 
+    padding: 12px 24px; 
+    font-size: 1rem; 
+    margin-right: 10px;
+}
+
+.btn-destroy:hover {
+    background-color: #b91c1c;
+    box-shadow: 0 0 15px rgba(239, 68, 68, 0.4);
+}
 
 .btn:disabled { opacity: 0.3; cursor: not-allowed; }
 
@@ -140,6 +154,22 @@ body {
     gap: 24px;
 }
 
+.section-divider {
+    display: flex;
+    align-items: center;
+    margin-bottom: 10px;
+    padding-bottom: 10px;
+    border-bottom: 2px solid var(--border);
+}
+
+.section-title {
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
 .vpc-card {
     padding: 24px;
     border-radius: 12px;
@@ -147,11 +177,19 @@ body {
     border: 2px solid var(--border-strong);
 }
 
+.standalone-card {
+    padding: 24px;
+    border-radius: 12px;
+    background-color: var(--standalone-bg); /* Using distinct bg */
+    border: 2px solid var(--border-strong);
+    margin-bottom: 16px;
+}
+
 .row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 12px; }
 .label { font-weight: 600; color: var(--muted); }
 
 .domain-inputs-container .label {
-    flex: 0 0 130px; /* Fixed width for labels in EC2 Config */
+    flex: 0 0 130px; 
 }
 
 .input {
@@ -233,7 +271,7 @@ body {
 }
 
 /* =====================
-   TOKEN CARD FORMATTING (FIXED)
+   TOKEN CARD & FOOTER
    ===================== */
 
 .footer-container {
@@ -269,7 +307,7 @@ body {
 .token-icon { font-size: 1.2rem; }
 
 .token-input-field {
-    flex: 2; /* Takes more space than the button */
+    flex: 2; 
     min-width: 0;
 }
 
@@ -302,20 +340,6 @@ body {
     }
 
     .token-input-field { flex: none; }
-    .btn-submit { width: 100%; }
+    .btn-submit, .btn-destroy { width: 100%; margin-right: 0; margin-bottom: 10px; }
     .domain-inputs-container .label { flex: 0 0 100%; margin-bottom: 4px; }
-}
-
-/* Add this to your BUTTONS section in styles.css */
-.btn-destroy { 
-    background-color: var(--danger); 
-    color: #ffffff; 
-    padding: 12px 24px; 
-    font-size: 1rem; 
-    margin-right: 10px;
-}
-
-.btn-destroy:hover {
-    background-color: #b91c1c;
-    box-shadow: 0 0 15px rgba(239, 68, 68, 0.4);
 }

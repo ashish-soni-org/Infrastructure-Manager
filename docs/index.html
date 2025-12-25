@@ -14,14 +14,23 @@
     </header>
 
     <div class="counter-bar">
-        <span class="counter-label">VPC</span>
+        <span class="counter-label">VPC Count</span>
         <span id="vpcCounterValue" class="counter-value">1</span>
         <button id="vpcDecrementBtn" class="btn btn-decrement">−</button>
         <button id="vpcIncrementBtn" class="btn btn-increment">+</button>
-        <button id="vpcResetBtn" class="btn btn-reset">Reset</button>
+        <button id="globalResetBtn" class="btn btn-reset">Reset All</button>
     </div>
 
-    <main id="vpcContainer" class="cards-container"></main>
+    <main id="vpcContainer" class="cards-container">
+        </main>
+
+    <section class="cards-container">
+        <div class="section-divider">
+            <span class="section-title">Standalone Services (Global)</span>
+        </div>
+        <div id="standaloneContainer">
+            </div>
+    </section>
 
     <section class="manifest-section">
         <div class="manifest-header">
