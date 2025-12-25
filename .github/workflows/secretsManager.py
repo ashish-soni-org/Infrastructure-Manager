@@ -4,9 +4,7 @@ import boto3
 import sys
 from botocore.exceptions import ClientError
 
-# ------------------------------------------------------------------
-# Configuration from Environment Variables
-# ------------------------------------------------------------------
+# Configuration
 REGION = os.getenv("AWS_REGION")
 ACTION = os.getenv("ACTION_TYPE")
 SECRET_NAME = os.getenv("SECRET_FILE_NAME")
@@ -26,12 +24,10 @@ def handle_secret():
     client = get_client()
     
     try:
-        # ------------------------------------------------------------------
         # 1. Fetch Existing Secret
-        # ------------------------------------------------------------------
         full_data = {
             "proxy": "http://127.0.0.1/",
-            "max_port_used": "7999", 
+            "max_port_used": "7999",
             "repo_mapping": {},
             "repos": {}
         }
@@ -47,9 +43,7 @@ def handle_secret():
             else:
                 raise e
 
-        # ------------------------------------------------------------------
         # 2. Handler: CREATE_FILE_STRUCTURE
-        # ------------------------------------------------------------------
         if ACTION == CREATE_FILE_STRUCTURE:
             runner_host = os.getenv("SELF_HOSTED_RUNNER")
             if runner_host: full_data["runner_host"] = runner_host
@@ -62,9 +56,7 @@ def handle_secret():
             client.put_secret_value(SecretId=SECRET_NAME, SecretString=json.dumps(full_data))
             print(f"SUCCESS: Infrastructure secrets initialized.")
 
-        # ------------------------------------------------------------------
         # 3. Handler: SERVICE_REQUEST
-        # ------------------------------------------------------------------
         elif ACTION == SERVICE_REQUEST:
             requested_env = os.getenv("SERVICES", "")
             requested_list = [s.strip() for s in requested_env.split(";") if s.strip()]
@@ -85,9 +77,7 @@ def handle_secret():
                     f.write(f"needs_provisioning={'true' if needs_provisioning else 'false'}\n")
             print(f"Check Complete. Provisioning needed: {needs_provisioning}")
 
-        # ------------------------------------------------------------------
         # 4. Handler: ADD_SERVICES
-        # ------------------------------------------------------------------
         elif ACTION == ADD_SERVICES:
             try:
                 tf_data = json.loads(SERVICES_JSON)
@@ -112,19 +102,16 @@ def handle_secret():
             client.put_secret_value(SecretId=SECRET_NAME, SecretString=json.dumps(full_data))
             print(f"SUCCESS: Updated {TARGET_REPO} with {updates}")
 
-        # ------------------------------------------------------------------
         # 5. Handler: CHECK_MAPPING
-        # ------------------------------------------------------------------
         elif ACTION == CHECK_MAPPING:
             repo_mapping = full_data.get("repo_mapping", {})
             is_mapped = False
             assigned_port = ""
 
-            # A. Port Assignment Logic
+            # A. Port Assignment
             if TARGET_REPO in repo_mapping:
                 is_mapped = True
                 assigned_port = repo_mapping[TARGET_REPO]
-                print(f"Repo {TARGET_REPO} already mapped to port {assigned_port}")
             else:
                 try:
                     current_max = int(full_data.get("max_port_used", "7999"))
@@ -140,17 +127,17 @@ def handle_secret():
                 client.put_secret_value(SecretId=SECRET_NAME, SecretString=json.dumps(full_data))
                 print(f"Assigned new port {assigned_port} for {TARGET_REPO}")
 
-            # B. Construct Outputs
-            # 1. Proxy Target (e.g., http://127.0.0.1:8000/)
+            # B. Outputs
+            # 1. Proxy Target
             base_proxy = full_data.get("proxy", "http://127.0.0.1/")
             clean_base = base_proxy.rstrip("/")
             proxy_target = f"{clean_base}:{assigned_port}/"
 
-            # 2. ECR Repo Name Lookup (CRITICAL FIX)
-            # Looks up the stored lowercase name: "vehicle-insurance-eligibility-prediction"
+            # 2. ECR Repo Name (Lowercase forced)
+            # Try to get from services, fallback to Repo Name
             repo_services = full_data.get("repos", {}).get(TARGET_REPO, {}).get("services", {})
-            # Fallback to TARGET_REPO if 'ECR' key is missing, but it should be there from ADD_SERVICES
-            ecr_repo_name = repo_services.get("ECR", TARGET_REPO)
+            raw_ecr_name = repo_services.get("ECR", TARGET_REPO)
+            ecr_repo_name = raw_ecr_name.lower()
 
             # Write to GitHub Output
             output_file = os.getenv('GITHUB_OUTPUT')

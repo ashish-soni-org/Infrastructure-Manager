@@ -17,6 +17,15 @@
     - name: Wait for connection
       ansible.builtin.wait_for_connection:
         timeout: 300
+    
+    # DEBUG: Print received variables to logs
+    - name: Debug Deployment Variables
+      ansible.builtin.debug:
+        msg: 
+          - "Repo Name: {{ repo_name }}"
+          - "Image URI: {{ image_uri }}"
+          - "Proxy Target: {{ proxy_target }}"
+          - "Is Mapped: {{ is_mapped }}"
 
     # 0. CLEANUP LEGACY
     - name: Disable and stop legacy startup service
@@ -124,7 +133,7 @@
           - "{{ proxy_target | regex_search(':[0-9]+') | replace(':','') }}:80"
       when: image_uri is defined and image_uri | length > 0
 
-    # 4. NGINX MAPPING (Only if not already mapped)
+    # 4. NGINX MAPPING
     - name: Upload Mapping Script
       ansible.builtin.copy:
         src: add_nginx_mapping.sh

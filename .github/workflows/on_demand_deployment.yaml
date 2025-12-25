@@ -21,7 +21,6 @@ jobs:
     outputs:
       is_mapped: ${{ steps.check_mapping.outputs.is_mapped }}
       proxy_target: ${{ steps.check_mapping.outputs.proxy_target }}
-      # UPDATED: Uses the correct lowercase ECR name from the script
       image_uri: ${{ steps.login_ecr.outputs.registry }}/${{ steps.check_mapping.outputs.ecr_repo_name }}:latest
       instance_ids: "all" 
 
@@ -56,6 +55,12 @@ jobs:
           SECRET_FILE_NAME: ${{ secrets.SECRETS_FILE_NAME }}
           ACTION_TYPE: ${{ env.ACTION_TYPE }}
           REPO_NAME: ${{ env.REPO_NAME }}
+
+      - name: Debug Outputs
+        run: |
+          echo "Registry: ${{ steps.login_ecr.outputs.registry }}"
+          echo "ECR Repo Name: ${{ steps.check_mapping.outputs.ecr_repo_name }}"
+          echo "Combined URI: ${{ steps.login_ecr.outputs.registry }}/${{ steps.check_mapping.outputs.ecr_repo_name }}:latest"
 
   deploy_to_ec2:
     name: Deploy & Configure Nginx
