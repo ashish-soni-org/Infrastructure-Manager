@@ -11,6 +11,9 @@
     ansible_aws_ssm_bucket_name: "{{ ANSIBLE_AWS_SSM_BUCKET_NAME }}"
     ansible_aws_ssm_region: "{{ ANSIBLE_AWS_SSM_REGION }}"
     WORKDIR: /home/ubuntu/nginx_config_creation_scripts
+    
+    # Safe parsing: If "false", return empty list, otherwise parse the JSON string
+    domain_list: "{{ (dns_instances != 'false') | ternary(dns_instances | from_json, []) }}"
 
   tasks:
     - name: Wait for connection
@@ -28,35 +31,63 @@
         src: basic_config.sh
         dest: "{{ WORKDIR }}/basic_config.sh"
         mode: '0755'
-    
-    - name: Create basic configuration file
+
+    # ------------------------------------------------------------
+    # SCENARIO 1: Domains Provided (dns_instances is NOT "false")
+    # ------------------------------------------------------------
+
+    - name: Create domain specific configuration files
       ansible.builtin.shell: 
         cmd: "./basic_config.sh '{{ item.domain }}' '{{ CONFIG_FOLDER }}'"
       args:
         chdir: "{{ WORKDIR }}"
-      loop: "{{ dns_instances | from_json }}"
+      loop: "{{ domain_list }}"
       loop_control:
-        label: "{{ item.instance_id }} → {{ item.domain }}"
+        label: "{{ item.domain }}"
+      when: dns_instances != "false"
 
-    - name: Enable the site
+    - name: Enable domain sites (Symlink)
       ansible.builtin.file:
         src: "{{ CONFIG_FOLDER }}/{{ item.domain }}"
         dest: "{{ ENABLEMENT_FOLDER }}/{{ item.domain }}"
         state: link
         force: true
-      loop: "{{ dns_instances | from_json }}"
+      loop: "{{ domain_list }}"
       loop_control:
         label: "{{ item.domain }}"
+      when: dns_instances != "false"
 
-    - name: Remove default NGINX config from sites-enabled
+    - name: Remove default NGINX config (Cleanup)
       ansible.builtin.file:
-        path: "{{ ENABLEMENT_FOLDER }}/default"
+        path: "{{ item }}"
         state: absent
+      loop:
+        - "{{ ENABLEMENT_FOLDER }}/default"
+        - "{{ CONFIG_FOLDER }}/default"
+      when: dns_instances != "false"
 
-    - name: Remove default NGINX config from sites-available
+    # ------------------------------------------------------------
+    # SCENARIO 2: No Domain Provided (dns_instances IS "false")
+    # ------------------------------------------------------------
+
+    - name: Update default configuration file
+      ansible.builtin.shell: 
+        cmd: "./basic_config.sh 'default' '{{ CONFIG_FOLDER }}'"
+      args:
+        chdir: "{{ WORKDIR }}"
+      when: dns_instances == "false"
+
+    - name: Ensure default site is enabled
       ansible.builtin.file:
-        path: "{{ CONFIG_FOLDER }}/default"
-        state: absent
+        src: "{{ CONFIG_FOLDER }}/default"
+        dest: "{{ ENABLEMENT_FOLDER }}/default"
+        state: link
+        force: true
+      when: dns_instances == "false"
+
+    # ------------------------------------------------------------
+    # RELOAD SERVICE
+    # ------------------------------------------------------------
 
     - name: Reload Nginx
       ansible.builtin.service:
