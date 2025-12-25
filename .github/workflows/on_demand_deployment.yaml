@@ -111,6 +111,7 @@ jobs:
           # Here we use the inventory logic from previous steps or 'all' if defined in hosts.
           
           ansible-playbook docker_configuration.yaml \
+            -i "i-078ce0691ad4f093d," \
             --vault-password-file ../../../.vault_pass \
             -e "repo_name=${{ env.REPO_NAME }}" \
             -e "image_uri=${{ needs.determine_deployment_strategy.outputs.image_uri }}" \
