@@ -364,7 +364,7 @@ jobs:
   # SSL CERTIFICATION
   ssl_certified:
     name: Obtain SSL (Certbot)
-    needs: [resource_provision, configure_nginx]
+    needs: [resource_provision, configure_nginx, dns_mapping]
     if: needs.resource_provision.outputs.map_domain == 'true'
     runs-on: ubuntu-latest
     defaults:
