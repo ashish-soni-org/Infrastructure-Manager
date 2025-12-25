@@ -1,3 +1,4 @@
+---
 - name: Install and start runner on instance
   hosts: all
   gather_facts: true
@@ -24,7 +25,14 @@
 
     - name: Install dependencies for runner
       ansible.builtin.apt:
-        name: ['curl', 'jq', 'git', 'tar', 'libdigest-sha-perl', 'libicu-dev']
+        name: 
+          - curl
+          - jq
+          - git
+          - tar
+          - libdigest-sha-perl
+          - libicu-dev
+          - acl  # Added 'acl' to support complex permission handling if needed
         state: present
         update_cache: yes
       when: ansible_os_family == "Debian"
@@ -77,8 +85,11 @@
 
     - name: Configure the runner
       ansible.builtin.command:
+        # FIX: We run the command as root (play level become: true) but invoke 'sudo -u' 
+        # to execute the script as the runner user. This avoids Ansible 'become_user' 
+        # temp file permission errors on restricted filesystems.
         cmd: >
-          ./config.sh
+          sudo -u {{ runner_user }} ./config.sh
           --url "https://github.com/{{ REPO_URL | regex_replace('https://github.com/([^/]+)/.*', '\\1') }}"
           --token {{ runner_token }}
           --runnergroup "Production_Runners"
@@ -89,8 +100,7 @@
           --replace
       args:
         chdir: "{{ runner_base_path }}"
-      become_user: "{{ runner_user }}"
-      # Only run configuration if .runner file does not exist
+      # IMPORTANT: 'become_user' is removed here to prevent the permission error.
       when: not runner_config_file.stat.exists
 
     - name: Install the runner service
