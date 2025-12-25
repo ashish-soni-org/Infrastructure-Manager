@@ -20,6 +20,7 @@ SERVICES_JSON = os.getenv("PROVISIONED_MAP", "{}")
 CREATE_FILE_STRUCTURE = "CREATE_FILE_STRUCTURE"
 SERVICE_REQUEST = "SERVICE_REQUEST"
 ADD_SERVICES = "ADD_SERVICES"
+CHECK_MAPPING = "CHECK_MAPPING"
 
 def get_client():
     """Initializes the Boto3 Secrets Manager client."""
@@ -102,11 +103,9 @@ def handle_secret():
             updates = {}
 
             # Map Terraform Output Keys -> Secret Manager Keys
-            # 1. Map S3
             if "s3_buckets" in tf_data and target_key in tf_data["s3_buckets"]:
                 updates["S3"] = tf_data["s3_buckets"][target_key]
             
-            # 2. Map ECR
             if "ecr_repositories" in tf_data and target_key in tf_data["ecr_repositories"]:
                 updates["ECR"] = tf_data["ecr_repositories"][target_key]
 
@@ -125,6 +124,62 @@ def handle_secret():
                 SecretString=json.dumps(full_data)
             )
             print(f"SUCCESS: Updated {TARGET_REPO} in Secrets Manager with: {updates}")
+
+        # ------------------------------------------------------------------
+        # 5. Action Handler: CHECK_MAPPING (For Deployment & Port Assignment)
+        # ------------------------------------------------------------------
+        elif ACTION == CHECK_MAPPING:
+            repos = full_data.get("repos", {})
+            repo_data = repos.get(TARGET_REPO, {})
+            
+            # Check if 'proxy_target' exists in the secret
+            current_target = repo_data.get("proxy_target", "")
+            
+            is_mapped = False
+            proxy_target = ""
+
+            if current_target:
+                # SCENARIO A: Already Mapped
+                is_mapped = True
+                proxy_target = current_target
+                print(f"Repo {TARGET_REPO} is already mapped to {proxy_target}")
+            else:
+                # SCENARIO B: New Mapping Required -> Assign Port
+                used_ports = []
+                # Scan all repos to find currently used ports
+                for r_data in repos.values():
+                    pt = r_data.get("proxy_target", "")
+                    if pt:
+                        # Extract port from string http://127.0.0.1:8080/
+                        try:
+                            # Split by colon, take last part, remove trailing slash
+                            port_str = pt.split(":")[-1].replace("/", "")
+                            used_ports.append(int(port_str))
+                        except (ValueError, IndexError):
+                            pass
+                
+                # Start assigning from 8000
+                next_port = 8000
+                while next_port in used_ports:
+                    next_port += 1
+                
+                proxy_target = f"http://127.0.0.1:{next_port}/"
+                
+                # Update Secret immediately to reserve the port
+                repos.setdefault(TARGET_REPO, {})["proxy_target"] = proxy_target
+                
+                client.put_secret_value(
+                    SecretId=SECRET_NAME,
+                    SecretString=json.dumps(full_data)
+                )
+                print(f"Assigned new target {proxy_target} for {TARGET_REPO} (Port {next_port})")
+
+            # Write outputs for GitHub Actions
+            output_file = os.getenv('GITHUB_OUTPUT')
+            if output_file:
+                with open(output_file, "a") as f:
+                    f.write(f"is_mapped={'true' if is_mapped else 'false'}\n")
+                    f.write(f"proxy_target={proxy_target}\n")
 
     except Exception as e:
         print(f"FATAL ERROR: {str(e)}")

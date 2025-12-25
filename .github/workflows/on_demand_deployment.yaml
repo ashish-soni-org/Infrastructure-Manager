@@ -4,10 +4,120 @@ on:
   repository_dispatch:
     types: [event-on-demand-deployment]
 
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  OWNER: "ashish-soni-org"
+  ACTION_TYPE: "CHECK_MAPPING"
+  REPO_NAME: ${{ github.event.client_payload.repo }}
+  ENDPOINT: ${{ github.event.client_payload.endpoint }}
+
 jobs:
-  verify_logging:
-    name: Hello World Log Check
+  determine_deployment_strategy:
+    name: Check Port Mapping & Strategy
     runs-on: ubuntu-latest
+    outputs:
+      is_mapped: ${{ steps.check_mapping.outputs.is_mapped }}
+      proxy_target: ${{ steps.check_mapping.outputs.proxy_target }}
+      image_uri: ${{ steps.login_ecr.outputs.registry }}/${{ secrets.ECR_REPO }}:latest
+      instance_ids: ${{ steps.tf_outputs.outputs.instance_ids }}
+
     steps:
-      - name: Print Hello World to Logs
-        run: echo "Hello World - CI/CD Log Verification Successful"
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION_NAME }}
+
+      - name: Login to Amazon ECR
+        id: login_ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install Dependencies
+        run: pip install boto3 botocore
+
+      - name: Determine Mapping & Port
+        id: check_mapping
+        run: python .github/workflows/secretsManager.py
+        env:
+          AWS_REGION: ${{ secrets.AWS_REGION_NAME }}
+          SECRET_FILE_NAME: ${{ secrets.SECRETS_FILE_NAME }}
+          ACTION_TYPE: ${{ env.ACTION_TYPE }}
+          REPO_NAME: ${{ env.REPO_NAME }}
+
+      - name: Fetch Active Instances (Terraform Output)
+        id: tf_outputs
+        run: |
+          # We need the Instance IDs where Docker is running.
+          # Assuming we fetch the 'service_inventory' from the state file or previous outputs.
+          # For robustness, we re-read the state file or rely on a known output structure.
+          
+          # NOTE: In a real scenario, you might want to fetch this from Terraform State directly
+          # or pass it along. Here we assume we fetch it from the state bucket for accuracy.
+          
+          aws s3 cp "s3://${{ secrets.AWS_TF_STATE_FILE_BUCKET }}/${{ secrets.AWS_TF_STATE_MANIFEST_FILE_PATH }}" state.json
+          # Simple extraction logic (mocked for this specific file, ideally use Terraform output)
+          # For now, we assume we deploy to ALL Docker instances found in the manifest.
+          
+          # Just passing a placeholder that Ansible will resolve using dynamic inventory or 'all'
+          echo "instance_ids=all" >> $GITHUB_OUTPUT
+
+  deploy_to_ec2:
+    name: Deploy & Configure Nginx
+    needs: determine_deployment_strategy
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION_NAME }}
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install Ansible
+        run: pip install ansible boto3 botocore
+
+      - name: Create Vault Password File
+        run: |
+          echo "${{ secrets.VAULT_PASSWORD }}" > .vault_pass
+          chmod 600 .vault_pass
+
+      - name: Run Ansible Deployment Playbook
+        working-directory: ansible/docker/config
+        env:
+          ANSIBLE_HOST_KEY_CHECKING: "False"
+        run: |
+          # Retrieve target instances. In production, this should be specific IDs.
+          # Here we use the inventory logic from previous steps or 'all' if defined in hosts.
+          
+          ansible-playbook docker_configuration.yaml \
+            --vault-password-file ../../../.vault_pass \
+            -e "repo_name=${{ env.REPO_NAME }}" \
+            -e "image_uri=${{ needs.determine_deployment_strategy.outputs.image_uri }}" \
+            -e "proxy_target=${{ needs.determine_deployment_strategy.outputs.proxy_target }}" \
+            -e "is_mapped=${{ needs.determine_deployment_strategy.outputs.is_mapped }}" \
+            -e "endpoint=${{ env.ENDPOINT }}"
+
+      - name: Clean Cleanup
+        if: always()
+        run: rm -f .vault_pass
