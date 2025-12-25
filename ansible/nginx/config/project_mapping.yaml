@@ -10,22 +10,15 @@
     ansible_connection: "{{ ANSIBLE_CONNECTION }}"
     ansible_aws_ssm_bucket_name: "{{ ANSIBLE_AWS_SSM_BUCKET_NAME }}"
     ansible_aws_ssm_region: "{{ ANSIBLE_AWS_SSM_REGION }}"
-    
-    # Directories
     WORKDIR: /home/ubuntu/nginx_config_creation_scripts
     NGINX_ENABLED: /etc/nginx/sites-enabled
-    
-    # Dynamic Variables (Passed from CI/CD)
-    # repo_name, image_uri, proxy_target, is_mapped, endpoint
 
   tasks:
     - name: Wait for connection
       ansible.builtin.wait_for_connection:
         timeout: 300
 
-    # ---------------------------------------------------------
-    # 0. CLEANUP LEGACY SERVICE
-    # ---------------------------------------------------------
+    # 0. CLEANUP LEGACY
     - name: Disable and stop legacy startup service
       ansible.builtin.systemd:
         name: startup.service
@@ -42,9 +35,7 @@
       ansible.builtin.systemd:
         daemon_reload: true
 
-    # ---------------------------------------------------------
-    # 1. PREREQUISITES (AWS CLI for ECR Login)
-    # ---------------------------------------------------------
+    # 1. AWS CLI PREREQUISITES
     - name: Install Unzip
       ansible.builtin.package:
         name: unzip
@@ -73,9 +64,7 @@
       ansible.builtin.command: "/tmp/aws/install --update"
       when: aws_cli_check.rc != 0
 
-    # ---------------------------------------------------------
-    # 2. IDENTIFY NGINX CONFIGURATION FILE (FIXED - NATIVE MODULES)
-    # ---------------------------------------------------------
+    # 2. IDENTIFY NGINX CONFIG FILE
     - name: Check for default config
       ansible.builtin.stat:
         path: "{{ NGINX_ENABLED }}/default"
@@ -84,7 +73,7 @@
     - name: Find other config files
       ansible.builtin.find:
         paths: "{{ NGINX_ENABLED }}"
-        file_type: any # Matches files or symlinks
+        file_type: any
         recurse: no
         patterns: "*"
         excludes: "default"
@@ -93,7 +82,6 @@
 
     - name: Set Active Config File Fact
       ansible.builtin.set_fact:
-        # Logic: If default exists, use it. Else, pick the first file found.
         active_config_file: >-
           {{
             (NGINX_ENABLED ~ '/default')
@@ -106,10 +94,7 @@
         msg: "No active Nginx configuration file found in {{ NGINX_ENABLED }}"
       when: active_config_file == ""
 
-    # ---------------------------------------------------------
-    # 3. DOCKER LIFECYCLE MANAGEMENT
-    # ---------------------------------------------------------
-    
+    # 3. DOCKER LIFECYCLE
     - name: Log into ECR
       ansible.builtin.shell: |
         aws ecr get-login-password --region {{ ansible_aws_ssm_region }} | docker login --username AWS --password-stdin {{ image_uri.split('/')[0] }}
@@ -139,10 +124,7 @@
           - "{{ proxy_target | regex_search(':[0-9]+') | replace(':','') }}:80"
       when: image_uri is defined and image_uri | length > 0
 
-    # ---------------------------------------------------------
-    # 4. NGINX MAPPING (ONLY IF NOT MAPPED)
-    # ---------------------------------------------------------
-
+    # 4. NGINX MAPPING (Only if not already mapped)
     - name: Upload Mapping Script
       ansible.builtin.copy:
         src: add_nginx_mapping.sh
