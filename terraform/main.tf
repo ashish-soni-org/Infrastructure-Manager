@@ -1,16 +1,135 @@
-terraform {
-  required_providers {
-    aws = {
-      source = "hashicorp/aws"
-      version = "6.26.0"
-    }
-    random = {
-      source = "hashicorp/random"
-      version = "3.7.2"
-    }
+# ---------------------------------------------------------------------------
+# NETWORKING RESOURCES
+# ---------------------------------------------------------------------------
+
+resource "aws_vpc" "VPC" {
+  for_each             = local.vpcs
+  cidr_block           = each.value.cidr_block
+  enable_dns_support   = true
+  enable_dns_hostnames = true
+  tags                 = { Name = each.value.name }
+}
+
+resource "aws_internet_gateway" "IGW" {
+  for_each = local.vpcs
+  vpc_id   = aws_vpc.VPC[each.key].id
+  tags     = { Name = "${each.value.name}-igw" }
+}
+
+resource "aws_route_table" "RT" {
+  for_each = local.vpcs
+  vpc_id   = aws_vpc.VPC[each.key].id
+  tags     = { Name = "${each.value.name}-rt" }
+}
+
+resource "aws_route" "public_internet_access" {
+  for_each               = local.vpcs
+  route_table_id         = aws_route_table.RT[each.key].id
+  destination_cidr_block = "0.0.0.0/0"
+  gateway_id             = aws_internet_gateway.IGW[each.key].id
+}
+
+resource "aws_subnet" "SUBNET" {
+  for_each                = local.subnets
+  vpc_id                  = aws_vpc.VPC[each.value.vpc_name].id
+  cidr_block              = each.value.cidr_block
+  map_public_ip_on_launch = true # Ensure instances get public IPs for Ansible access
+  tags                    = { Name = each.value.name }
+}
+
+resource "aws_route_table_association" "RT_ASSOC" {
+  for_each       = local.subnets
+  subnet_id      = aws_subnet.SUBNET[each.key].id
+  route_table_id = aws_route_table.RT[each.value.vpc_name].id
+}
+
+resource "aws_security_group" "WEB_SG" {
+  for_each    = local.vpcs
+  name        = "web-access-${each.key}"
+  description = "Allow HTTP/HTTPS"
+  vpc_id      = aws_vpc.VPC[each.key].id
+
+  # Inbound HTTP
+  ingress {
+    from_port   = 80
+    to_port     = 80
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  # Inbound HTTPS
+  ingress {
+    from_port   = 443
+    to_port     = 443
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  # Outbound All
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  tags = { Name = "web-access-${each.key}" }
+}
+
+# ---------------------------------------------------------------------------
+# COMPUTE RESOURCES
+# ---------------------------------------------------------------------------
+
+resource "aws_instance" "EC2" {
+  for_each = local.ec2_instances
+
+  ami                  = each.value.ami
+  instance_type        = each.value.instance_type
+  iam_instance_profile = data.aws_iam_instance_profile.ec2_profile.name
+  subnet_id            = aws_subnet.SUBNET[each.value.subnet_key].id
+  
+  vpc_security_group_ids = [
+    aws_security_group.WEB_SG[each.value.vpc_name].id
+  ]
+
+  tags = {
+    Name     = each.value.name
+    VPC      = each.value.vpc_name
+    Services = join(",", each.value.services)
   }
 }
 
-# provider "aws" {
-#   region = var.region
-# }
+resource "aws_eip" "ELASTIC_IP" {
+  for_each = local.ec2_instances
+  domain   = "vpc"
+  instance = aws_instance.EC2[each.key].id
+  tags     = { Name = "EIP-${each.value.name}" }
+}
+
+# ---------------------------------------------------------------------------
+# STORAGE & REGISTRY RESOURCES
+# ---------------------------------------------------------------------------
+
+resource "random_id" "BUCKET_SUFFIX" {
+  for_each    = local.s3_buckets
+  byte_length = 4
+}
+
+resource "aws_s3_bucket" "S3_BUCKET" {
+  for_each = local.s3_buckets
+  # S3 bucket names must be globally unique
+  bucket   = "${each.value.name}-${random_id.BUCKET_SUFFIX[each.key].hex}"
+  force_destroy = true 
+  tags     = { Name = each.value.name }
+}
+
+resource "aws_ecr_repository" "ECR_REPO" {
+  for_each             = local.ecr_repositories
+  name                 = each.value.name
+  image_tag_mutability = "MUTABLE"
+  force_delete         = true
+
+  image_scanning_configuration {
+    scan_on_push = true
+  }
+}
