@@ -4,6 +4,10 @@ on:
   repository_dispatch:
     types: [event-on-demand-services]
 
+permissions:
+  id-token: write
+  contents: read
+
 env:
   OWNER: "ashish-soni-org"
   ACTION_TYPE: "ADD_SERVICES"
@@ -35,43 +39,48 @@ jobs:
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
         with:
-          terraform_version: 1.14.0
+          terraform_version: 1.14.2
 
       - name: Load and Merge Provisioning Manifest
         run: |
           set -e
 
-          # 1. Fetch existing manifest from S3 or initialize empty list
+          # 1. Fetch existing manifest from S3 or initialize a valid Schema Object
+          # NOTE: The schema MUST be an Object { "vpcs": [], "standalone": [] } 
+          # to match the Terraform variables.
           if aws s3 ls "s3://${{ secrets.AWS_TF_STATE_FILE_BUCKET }}/${{ secrets.AWS_TF_STATE_MANIFEST_FILE_PATH }}" > /dev/null 2>&1; then
             aws s3 cp "s3://${{ secrets.AWS_TF_STATE_FILE_BUCKET }}/${{ secrets.AWS_TF_STATE_MANIFEST_FILE_PATH }}" old.json
           else
-            echo "[]" > old.json
+            echo '{"vpcs": [], "standalone": []}' > old.json
           fi
 
-          # 2. Process the incoming JSON payload SAFELY
-          # We use toJSON() to ensure the output is valid JSON, preventing jq parse errors.
-          echo '${{ toJSON(github.event.client_payload.services) }}' > new.json
+          # 2. Process the incoming JSON payload (The array of new services)
+          echo '${{ toJSON(github.event.client_payload.services) }}' > new_services.json
 
-          # 3. Validate JSON structure
-          # Terraform expects an Array of Objects. If it's not an array, fail early with a clear message.
-          if ! jq -e 'type == "array"' new.json > /dev/null; then
-            echo "::error::Input payload must be a JSON Array of VPC objects. Received: $(cat new.json)"
-            exit 1
+          # 3. Validate Inputs
+          # Ensure old.json is an Object and new_services.json is an Array
+          if ! jq -e 'type == "object"' old.json > /dev/null; then
+             echo "::error::Existing state is corrupt (not an object). Resetting."
+             echo '{"vpcs": [], "standalone": []}' > old.json
+          fi
+          if ! jq -e 'type == "array"' new_services.json > /dev/null; then
+             echo "::error::Input services payload must be an Array. Received: $(cat new_services.json)"
+             exit 1
           fi
 
-          # 4. Merge old and new manifests
-          # This appends the new VPC objects to the existing list and removes duplicates
-          jq -s 'add | unique' old.json new.json > merged.json
+          # 4. Merge Logic
+          # We append the new services array to the existing .standalone array
+          # and ensure uniqueness to avoid duplicates.
+          jq --slurpfile new new_services.json \
+             '.standalone = (.standalone + $new[0]) | .standalone |= unique' \
+             old.json > merged.json
 
           # 5. Persist updated manifest back to S3
           aws s3 cp merged.json "s3://${{ secrets.AWS_TF_STATE_FILE_BUCKET }}/${{ secrets.AWS_TF_STATE_MANIFEST_FILE_PATH }}"
 
           # 6. Generate Terraform variables
-          cat <<EOF > terraform.tfvars.json
-          {
-            "ui_manifest": $(cat merged.json)
-          }
-          EOF
+          # Wraps the merged object into the "ui_manifest" variable
+          echo "{\"ui_manifest\": $(cat merged.json)}" > terraform.tfvars.json
 
       - name: Initialize Terraform
         run: |
@@ -88,11 +97,18 @@ jobs:
         id: tf_outputs
         run: |
           # Extract the map and convert to a single-line JSON string
-          PROVISIONED_JSON=$(terraform output -json provisioned_names | jq -c '.')
+          PROVISIONED_JSON=$(terraform output -json provisioned_resources | jq -c '.')
           echo "TF_PROVISIONED_MAP=$PROVISIONED_JSON" >> $GITHUB_ENV
 
-      - name: Update provisined services
-        run: python .github/workflows/secretsManager.py
+      - name: Update Provisioned Services (Secrets Manager)
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      
+      - name: Run Secrets Manager Script
+        run: |
+          pip install boto3 botocore
+          python ../.github/workflows/secretsManager.py
         env:
           AWS_REGION: ${{ secrets.AWS_REGION_NAME }}
           SECRET_FILE_NAME: ${{ secrets.SECRETS_FILE_NAME }}
@@ -103,6 +119,7 @@ jobs:
   deploy_website_and_projects:
     name: Trigger Source Repository Build
     needs: [service_provision]
+    if: success()
     runs-on: ubuntu-latest
 
     steps:
