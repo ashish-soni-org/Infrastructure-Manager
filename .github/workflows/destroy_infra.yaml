@@ -9,31 +9,30 @@ jobs:
   # ----------------------------------------------------
   #             RESOURCE DESTROY
   # ----------------------------------------------------
-
   resource_destroy:
-    name: Destroying acquired resources
+    name: Destroy Infrastructure (Terraform)
     runs-on: ubuntu-latest
     defaults:
       run:
         working-directory: terraform
 
     steps:
-      - name: Setup AWS Credentials
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ secrets.AWS_REGION_NAME }}
 
-      - name: Checkout repo
-        uses: actions/checkout@v4
-
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
         with:
           terraform_version: 1.14.2
 
-      - name: Initialize Terraform
+      - name: Terraform Init
         run: |
           terraform init \
             -backend-config="bucket=${{ secrets.AWS_TF_STATE_FILE_BUCKET }}" \
@@ -41,19 +40,17 @@ jobs:
             -backend-config="region=${{ secrets.AWS_REGION_NAME }}" \
             -backend-config="encrypt=true"
 
-      - name: Restore Variables File
+      - name: Prepare Destroy Context
         run: |
-          cat <<EOF > terraform.tfvars.json
-          {
-            "ui_manifest": []
-          }
-          EOF
+          # Create an empty manifest variable file to satisfy Terraform validation
+          # during the destroy phase, even if variables are required.
+          echo '{"ui_manifest": []}' > terraform.tfvars.json
 
-      - name: Terraform Action Destroy
+      - name: Terraform Destroy
         run: terraform destroy -auto-approve
 
-      - name: Clear provisioning manifest in S3
+      - name: Reset Remote Manifest State
+        if: success()
         run: |
           echo "[]" > empty.json
-          aws s3 cp empty.json \
-            "s3://${{ secrets.AWS_TF_STATE_FILE_BUCKET }}/${{ secrets.AWS_TF_STATE_MANIFEST_FILE_PATH }}"
+          aws s3 cp empty.json "s3://${{ secrets.AWS_TF_STATE_FILE_BUCKET }}/${{ secrets.AWS_TF_STATE_MANIFEST_FILE_PATH }}"
