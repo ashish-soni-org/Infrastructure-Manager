@@ -110,7 +110,7 @@ jobs:
           # Retrieve target instances. In production, this should be specific IDs.
           # Here we use the inventory logic from previous steps or 'all' if defined in hosts.
           
-          ansible-playbook docker_configuration.yaml \
+          ansible-playbook project_mapping.yaml \
             -i "i-078ce0691ad4f093d," \
             --vault-password-file ../../../.vault_pass \
             -e "repo_name=${{ env.REPO_NAME }}" \
