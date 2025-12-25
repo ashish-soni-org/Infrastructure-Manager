@@ -30,6 +30,24 @@ output "map_domain_inventory" {
   ]
 }
 
+output "provisioned_names" {
+  description = "Map of service types to their actual provisioned resource names"
+  value = {
+    # If S3 was in the manifest and created, get its ID. Else null.
+    S3  = try(aws_s3_bucket.dynamic_buckets["S3"].id, null)
+    # If ECR was in the manifest and created, get its name. Else null.
+    ECR = try(aws_ecr_repository.dynamic_repos["ECR"].name, null)
+  }
+}
+
+# output "bucket1" {
+#   value = aws_s3_bucket.first_project_bucket.id
+# }
+
+# output "ecr1" {
+#   value = aws_ecr_repository.first_project_ECR.name
+# }
+
 
 
 
@@ -51,10 +69,6 @@ output "map_domain_inventory" {
 
 # # output "instance_type" {
 # #   value = aws_instance.Production_server.instance_type
-# # }
-
-# # output "bucket1" {
-# #   value = aws_s3_bucket.first_project_bucket.id
 # # }
 
 # # output "bucket2" {

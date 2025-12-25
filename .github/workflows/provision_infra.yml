@@ -163,17 +163,17 @@ jobs:
   #         ANSIBLE_CONFIG: "../ansible.cfg"
   #         ANSIBLE_HOST_KEY_CHECKING: "False"
 
-  #     - name: Update secrets in AWS Secrets Manager
-  #       run: python3 ../../secretsManager.py
-  #       env:
-  #         AWS_REGION: ${{ secrets.AWS_REGION_NAME }}
-  #         SECRET_FILE_NAME: ${{ steps.ansible_step.outputs.SECRETS_FILE_NAME }}
-  #         ACTION_TYPE: "CREATE_NEW_RUNNER"
-  #         SELF_HOSTED_RUNNER: ${{ steps.ansible_step.outputs.RUNNER_HOST }}
+      # - name: Update secrets in AWS Secrets Manager
+      #   run: python3 .github/workflows/secretsManager.py
+      #   env:
+      #     AWS_REGION: ${{ secrets.AWS_REGION_NAME }}
+      #     SECRET_FILE_NAME: ${{ steps.ansible_step.outputs.SECRETS_FILE_NAME }}
+      #     ACTION_TYPE: "CREATE_FILE_STRUCTURE"
+      #     SELF_HOSTED_RUNNER: ${{ steps.ansible_step.outputs.RUNNER_HOST }}
 
-  #     - name: Clean Password File
-  #       if: always()
-  #       run: rm -f .vault_pass
+      # - name: Clean Password File
+      #   if: always()
+      #   run: rm -f .vault_pass
 
   # # ----------------------------------------------------
   # #             PACKAGE INSTALLATION
@@ -498,6 +498,7 @@ jobs:
   # ----------------------------------------------------
             
   deploy_website_and_projects:
+    name: Trigger Source Repository Build
     # needs: [hosting_runner, configure_nginx, startup_service_docker]
     runs-on: ubuntu-latest
     steps:

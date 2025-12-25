@@ -1,0 +1,117 @@
+name: Provisioning On-Demand-Services
+
+on:
+  repository_dispatch:
+    types: [event-on-demand-services]
+
+env:
+  OWNER: "ashish-soni-org"
+  ACTION_TYPE: "ADD_SERVICES"
+
+jobs:
+
+  # ----------------------------------------------------
+  #             SERVICE PROVISION
+  # ----------------------------------------------------
+
+  service_provision:
+    name: Provisioning required services
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: terraform
+
+    steps:
+      - name: Setup AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION_NAME }}
+
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.14.0
+
+      - name: Load and Merge Provisioning Manifest
+        run: |
+          set -e
+
+          # 1. Fetch existing manifest from S3 or initialize empty list
+          if aws s3 ls "s3://${{ secrets.AWS_TF_STATE_FILE_BUCKET }}/${{ secrets.AWS_TF_STATE_MANIFEST_FILE_PATH }}" > /dev/null 2>&1; then
+            aws s3 cp "s3://${{ secrets.AWS_TF_STATE_FILE_BUCKET }}/${{ secrets.AWS_TF_STATE_MANIFEST_FILE_PATH }}" old.json
+          else
+            echo "[]" > old.json
+          fi
+
+          # 2. Process the incoming string (e.g., "S3;ECR") into a JSON array
+          # Logic: Split by ';', trim whitespace, and filter empty results
+          RAW_SERVICES="${{ github.event.client_payload.services }}"
+          echo "$RAW_SERVICES" | jq -R 'split(";") | map(select(length > 0) | sub("^\\s+"; "") | sub("\\s+$"; ""))' > new.json
+
+          # 3. Merge old and new, ensuring uniqueness
+          jq -s 'add | unique' old.json new.json > merged.json
+
+          # 4. Persist updated manifest back to S3
+          aws s3 cp merged.json "s3://${{ secrets.AWS_TF_STATE_FILE_BUCKET }}/${{ secrets.AWS_TF_STATE_MANIFEST_FILE_PATH }}"
+
+          # 5. Generate Terraform variables
+          cat <<EOF > terraform.tfvars.json
+          {
+            "ui_manifest": $(cat merged.json)
+          }
+          EOF
+
+      - name: Initialize Terraform
+        run: |
+          terraform init \
+            -backend-config="bucket=${{ secrets.AWS_TF_STATE_FILE_BUCKET }}" \
+            -backend-config="key=${{ secrets.AWS_TF_STATE_FILE_PATH }}" \
+            -backend-config="region=${{ secrets.AWS_REGION_NAME }}" \
+            -backend-config="encrypt=true"
+
+      - name: Terraform Apply
+        run: terraform apply -auto-approve
+
+      - name: Capture Terraform Outputs
+        id: tf_outputs
+        run: |
+          # Extract the map and convert to a single-line JSON string
+          PROVISIONED_JSON=$(terraform output -json provisioned_names | jq -c '.')
+          echo "TF_PROVISIONED_MAP=$PROVISIONED_JSON" >> $GITHUB_ENV
+
+      - name: Update provisined services
+        run: python .github/workflows/secretsManager.py
+        env:
+          AWS_REGION: ${{ secrets.AWS_REGION_NAME }}
+          SECRET_FILE_NAME: ${{ secrets.SECRETS_FILE_NAME }}
+          ACTION_TYPE: ${{ env.ACTION_TYPE }}
+          REPO_NAME: ${{ github.event.client_payload.repo }}
+          PROVISIONED_MAP: ${{ env.TF_PROVISIONED_MAP }}
+            
+  deploy_website_and_projects:
+    name: Trigger Source Repository Build
+    needs: [service_provision]
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Generate GitHub App token
+        id: app-token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ secrets.GH_APP_ID }}
+          private-key: ${{ secrets.GH_APP_PRIVATE_KEY }}
+          owner: ${{ env.OWNER }}
+          repositories: ${{ github.event.client_payload.repo }}
+
+      - name: Trigger Other Repositories
+        run: |
+          curl -X POST \
+            -H "Authorization: Bearer ${{ steps.app-token.outputs.token }}" \
+            -H "Accept: application/vnd.github.v3+json" \
+            https://api.github.com/repos/${{ env.OWNER }}/${{ github.event.client_payload.repo }}/dispatches \
+            -d '{"event_type":"event-on-demand-build","client_payload":{}}'

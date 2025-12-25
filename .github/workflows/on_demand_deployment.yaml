@@ -1,8 +1,8 @@
-name: Deploy Application Docker Image to EC2 instance
+name: Deploy Application Docker Image to EC2
 
 on:
   repository_dispatch:
-    types: [event-on-demand-deploy]
+    types: [event-on-demand-deployment]
 
 jobs:
   verify_logging:
