@@ -105,21 +105,28 @@ locals {
     k => items[length(items) - 1]
   }
 
+# ---------------------------------------------------------------------------
+  # STEP 6: Normalize ECR repositories (FIXED: Unique Map for for_each)
   # ---------------------------------------------------------------------------
-  # STEP 6: Normalize ECR repositories (unique by key)
-  # ---------------------------------------------------------------------------
-  ecr_repositories = flatten([
-    for vpc_name, events in local.vpc_events : [
-      for sn in flatten([
-        for e in events : e.subnets
-      ]) : [
-        for res in sn.resources : [
-          for inst in res.instances : {
-            key  = "${vpc_name}-${sn.subnet_name}-${inst.name}"
-            name = lower(inst.name)
-          } if res.type == "ECR"
+  ecr_repositories_grouped = {
+    for item in flatten([
+      for vpc_name, events in local.vpc_events : [
+        for e in events : [
+          for sn in e.subnets : [
+            for res in sn.resources : [
+              for inst in res.instances : {
+                key  = "${vpc_name}-${sn.subnet_name}-${inst.name}"
+                name = lower(inst.name)
+              } if res.type == "ECR"
+            ]
+          ]
         ]
       ]
-    ]
-  ])
+    ]) : item.key => item...
+  }
+
+  ecr_repositories = {
+    for k, items in local.ecr_repositories_grouped :
+    k => items[length(items) - 1]
+  }
 }

@@ -31,12 +31,13 @@ output "map_domain_inventory" {
 }
 
 output "provisioned_names" {
-  description = "Map of service types to their actual provisioned resource names"
+  description = "Professional-grade map of service types to actual resource identifiers"
   value = {
-    # If S3 was in the manifest and created, get its ID. Else null.
-    S3  = try(aws_s3_bucket.dynamic_buckets["S3"].id, null)
-    # If ECR was in the manifest and created, get its name. Else null.
-    ECR = try(aws_ecr_repository.dynamic_repos["ECR"].name, null)
+    # Extract S3 bucket names if they were provisioned
+    "S3" = join(";", [for b in aws_s3_bucket.S3_BUCKET : b.id])
+    
+    # Extract ECR repository names if they were provisioned
+    "ECR" = join(";", [for repo in aws_ecr_repository.ECR_REPO : repo.name])
   }
 }
 
