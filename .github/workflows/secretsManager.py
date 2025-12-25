@@ -35,8 +35,7 @@ def handle_secret():
         try:
             response = client.get_secret_value(SecretId=SECRET_NAME)
             if 'SecretString' in response:
-                existing_data = json.loads(response['SecretString'])
-                full_data.update(existing_data)
+                full_data.update(json.loads(response['SecretString']))
         except ClientError as e:
             if e.response['Error']['Code'] == 'ResourceNotFoundException':
                 print(f"Secret {SECRET_NAME} not found. Creating new.")
@@ -133,8 +132,7 @@ def handle_secret():
             clean_base = base_proxy.rstrip("/")
             proxy_target = f"{clean_base}:{assigned_port}/"
 
-            # 2. ECR Repo Name (Lowercase forced)
-            # Try to get from services, fallback to Repo Name
+            # 2. ECR Repo Name (Extract lowercase name from services map)
             repo_services = full_data.get("repos", {}).get(TARGET_REPO, {}).get("services", {})
             raw_ecr_name = repo_services.get("ECR", TARGET_REPO)
             ecr_repo_name = raw_ecr_name.lower()

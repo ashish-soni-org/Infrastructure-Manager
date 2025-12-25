@@ -15,59 +15,8 @@ env:
   ENDPOINT: ${{ github.event.client_payload.endpoint }}
 
 jobs:
-  determine_deployment_strategy:
-    name: Check Port Mapping & Strategy
-    runs-on: ubuntu-latest
-    outputs:
-      is_mapped: ${{ steps.check_mapping.outputs.is_mapped }}
-      proxy_target: ${{ steps.check_mapping.outputs.proxy_target }}
-      # UPDATED: Use the explicit step output from 'construct_uri'
-      image_uri: ${{ steps.construct_uri.outputs.built_uri }}
-      instance_ids: "all" 
-
-    steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v4
-
-      - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ secrets.AWS_REGION_NAME }}
-
-      - name: Login to Amazon ECR
-        id: login_ecr
-        uses: aws-actions/amazon-ecr-login@v2
-
-      - name: Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-
-      - name: Install Dependencies
-        run: pip install boto3 botocore
-
-      - name: Determine Mapping & Port
-        id: check_mapping
-        run: python .github/workflows/secretsManager.py
-        env:
-          AWS_REGION: ${{ secrets.AWS_REGION_NAME }}
-          SECRET_FILE_NAME: ${{ secrets.SECRETS_FILE_NAME }}
-          ACTION_TYPE: ${{ env.ACTION_TYPE }}
-          REPO_NAME: ${{ env.REPO_NAME }}
-
-      # NEW STEP: Explicitly construct the URI and output it
-      - name: Construct Image URI
-        id: construct_uri
-        run: |
-          FULL_URI="${{ steps.login_ecr.outputs.registry }}/${{ steps.check_mapping.outputs.ecr_repo_name }}:latest"
-          echo "built_uri=$FULL_URI" >> $GITHUB_OUTPUT
-          echo "Debug: Constructed URI is $FULL_URI"
-
   deploy_to_ec2:
     name: Deploy & Configure Nginx
-    needs: determine_deployment_strategy
     runs-on: ubuntu-latest
     
     steps:
@@ -81,37 +30,50 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ secrets.AWS_REGION_NAME }}
 
+      # 1. Login to ECR (To get the Registry URL)
+      - name: Login to Amazon ECR
+        id: login_ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
 
-      - name: Install Ansible
+      - name: Install Dependencies
         run: pip install ansible boto3 botocore
+
+      # 2. Run Python Script (To get Proxy Target & Lowercase ECR Name)
+      - name: Determine Mapping & Port
+        id: check_mapping
+        run: python .github/workflows/secretsManager.py
+        env:
+          AWS_REGION: ${{ secrets.AWS_REGION_NAME }}
+          SECRET_FILE_NAME: ${{ secrets.SECRETS_FILE_NAME }}
+          ACTION_TYPE: ${{ env.ACTION_TYPE }}
+          REPO_NAME: ${{ env.REPO_NAME }}
 
       - name: Create Vault Password File
         run: |
           echo "${{ secrets.VAULT_PASSWORD }}" > .vault_pass
           chmod 600 .vault_pass
 
-      # DEBUG STEP: Verify variables arrived in Job 2
-      - name: Verify Inputs
-        run: |
-          echo "Recieved Image URI: ${{ needs.determine_deployment_strategy.outputs.image_uri }}"
-          echo "Recieved Proxy Target: ${{ needs.determine_deployment_strategy.outputs.proxy_target }}"
-
+      # 3. Run Ansible (Constructing URI inline)
       - name: Run Ansible Deployment Playbook
         working-directory: ansible/nginx/config
         env:
           ANSIBLE_HOST_KEY_CHECKING: "False"
         run: |
+          # Construct URI from Step 1 (Registry) and Step 2 (Repo Name)
+          FULL_URI="${{ steps.login_ecr.outputs.registry }}/${{ steps.check_mapping.outputs.ecr_repo_name }}:latest"
+
           ansible-playbook project_mapping.yaml \
             -i "i-078ce0691ad4f093d," \
             --vault-password-file ../../../.vault_pass \
             -e "repo_name=${{ env.REPO_NAME }}" \
-            -e "image_uri=${{ needs.determine_deployment_strategy.outputs.image_uri }}" \
-            -e "proxy_target=${{ needs.determine_deployment_strategy.outputs.proxy_target }}" \
-            -e "is_mapped=${{ needs.determine_deployment_strategy.outputs.is_mapped }}" \
+            -e "image_uri=$FULL_URI" \
+            -e "proxy_target=${{ steps.check_mapping.outputs.proxy_target }}" \
+            -e "is_mapped=${{ steps.check_mapping.outputs.is_mapped }}" \
             -e "endpoint=${{ env.ENDPOINT }}"
 
       - name: Cleanup
