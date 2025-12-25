@@ -48,18 +48,25 @@ jobs:
             echo "[]" > old.json
           fi
 
-          # 2. Process the incoming string (e.g., "S3;ECR") into a JSON array
-          # Logic: Split by ';', trim whitespace, and filter empty results
-          RAW_SERVICES="${{ github.event.client_payload.services }}"
-          echo "$RAW_SERVICES" | jq -R 'split(";") | map(select(length > 0) | sub("^\\s+"; "") | sub("\\s+$"; ""))' > new.json
+          # 2. Process the incoming JSON payload
+          # We treat the input 'services' as a raw JSON structure (List of Objects)
+          # instead of a semicolon-separated string.
+          echo '${{ github.event.client_payload.services }}' > new.json
 
-          # 3. Merge old and new, ensuring uniqueness
+          # 3. Validate JSON structure (Simple check to ensure it's an array)
+          if ! jq -e 'type == "array"' new.json > /dev/null; then
+            echo "Error: Input payload must be a JSON array of VPC objects."
+            exit 1
+          fi
+
+          # 4. Merge old and new manifests
+          # This appends the new VPC objects to the existing list and removes duplicates based on content
           jq -s 'add | unique' old.json new.json > merged.json
 
-          # 4. Persist updated manifest back to S3
+          # 5. Persist updated manifest back to S3
           aws s3 cp merged.json "s3://${{ secrets.AWS_TF_STATE_FILE_BUCKET }}/${{ secrets.AWS_TF_STATE_MANIFEST_FILE_PATH }}"
 
-          # 5. Generate Terraform variables
+          # 6. Generate Terraform variables
           cat <<EOF > terraform.tfvars.json
           {
             "ui_manifest": $(cat merged.json)
