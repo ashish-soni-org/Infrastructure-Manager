@@ -21,7 +21,8 @@ jobs:
     outputs:
       is_mapped: ${{ steps.check_mapping.outputs.is_mapped }}
       proxy_target: ${{ steps.check_mapping.outputs.proxy_target }}
-      image_uri: ${{ steps.login_ecr.outputs.registry }}/${{ steps.check_mapping.outputs.ecr_repo_name }}:latest
+      # UPDATED: Use the explicit step output from 'construct_uri'
+      image_uri: ${{ steps.construct_uri.outputs.built_uri }}
       instance_ids: "all" 
 
     steps:
@@ -56,11 +57,13 @@ jobs:
           ACTION_TYPE: ${{ env.ACTION_TYPE }}
           REPO_NAME: ${{ env.REPO_NAME }}
 
-      - name: Debug Outputs
+      # NEW STEP: Explicitly construct the URI and output it
+      - name: Construct Image URI
+        id: construct_uri
         run: |
-          echo "Registry: ${{ steps.login_ecr.outputs.registry }}"
-          echo "ECR Repo Name: ${{ steps.check_mapping.outputs.ecr_repo_name }}"
-          echo "Combined URI: ${{ steps.login_ecr.outputs.registry }}/${{ steps.check_mapping.outputs.ecr_repo_name }}:latest"
+          FULL_URI="${{ steps.login_ecr.outputs.registry }}/${{ steps.check_mapping.outputs.ecr_repo_name }}:latest"
+          echo "built_uri=$FULL_URI" >> $GITHUB_OUTPUT
+          echo "Debug: Constructed URI is $FULL_URI"
 
   deploy_to_ec2:
     name: Deploy & Configure Nginx
@@ -90,6 +93,12 @@ jobs:
         run: |
           echo "${{ secrets.VAULT_PASSWORD }}" > .vault_pass
           chmod 600 .vault_pass
+
+      # DEBUG STEP: Verify variables arrived in Job 2
+      - name: Verify Inputs
+        run: |
+          echo "Recieved Image URI: ${{ needs.determine_deployment_strategy.outputs.image_uri }}"
+          echo "Recieved Proxy Target: ${{ needs.determine_deployment_strategy.outputs.proxy_target }}"
 
       - name: Run Ansible Deployment Playbook
         working-directory: ansible/nginx/config
