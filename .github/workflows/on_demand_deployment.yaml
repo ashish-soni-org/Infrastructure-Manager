@@ -21,7 +21,8 @@ jobs:
     outputs:
       is_mapped: ${{ steps.check_mapping.outputs.is_mapped }}
       proxy_target: ${{ steps.check_mapping.outputs.proxy_target }}
-      image_uri: ${{ steps.login_ecr.outputs.registry }}/${{ secrets.ECR_REPO }}:latest
+      # UPDATED: Construct URI using the ECR Name fetched from Secrets Manager
+      image_uri: ${{ steps.login_ecr.outputs.registry }}/${{ steps.check_mapping.outputs.ecr_repo_name }}:latest
       instance_ids: "all" 
 
     steps:
@@ -86,13 +87,10 @@ jobs:
           chmod 600 .vault_pass
 
       - name: Run Ansible Deployment Playbook
-        # UPDATED: Correct path to the nginx config directory
         working-directory: ansible/nginx/config
         env:
           ANSIBLE_HOST_KEY_CHECKING: "False"
         run: |
-          # The playbook is now expected to be in ansible/nginx/config/project_mapping.yaml
-          
           ansible-playbook project_mapping.yaml \
             -i "i-078ce0691ad4f093d," \
             --vault-password-file ../../../.vault_pass \
