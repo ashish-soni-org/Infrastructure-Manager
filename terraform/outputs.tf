@@ -31,13 +31,16 @@ output "map_domain_inventory" {
 }
 
 output "provisioned_names" {
-  description = "Professional-grade map of service types to actual resource identifiers"
+  description = "Map of provisioned S3 buckets and ECR repositories for Secrets Manager update"
   value = {
-    # Extract S3 bucket names if they were provisioned
-    "S3" = join(";", [for b in aws_s3_bucket.S3_BUCKET : b.id])
-    
-    # Extract ECR repository names if they were provisioned
-    "ECR" = join(";", [for repo in aws_ecr_repository.ECR_REPO : repo.name])
+    s3_buckets = {
+      for key, bucket in aws_s3_bucket.S3_BUCKET :
+      local.s3_buckets[key].name => bucket.bucket
+    }
+    ecr_repositories = {
+      for key, repo in aws_ecr_repository.ECR_REPO :
+      local.ecr_repositories[key].name => repo.name
+    }
   }
 }
 
