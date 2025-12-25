@@ -22,7 +22,7 @@ jobs:
       is_mapped: ${{ steps.check_mapping.outputs.is_mapped }}
       proxy_target: ${{ steps.check_mapping.outputs.proxy_target }}
       image_uri: ${{ steps.login_ecr.outputs.registry }}/${{ secrets.ECR_REPO }}:latest
-      instance_ids: ${{ steps.tf_outputs.outputs.instance_ids }}
+      instance_ids: "all" 
 
     steps:
       - name: Checkout Repository
@@ -56,23 +56,6 @@ jobs:
           ACTION_TYPE: ${{ env.ACTION_TYPE }}
           REPO_NAME: ${{ env.REPO_NAME }}
 
-      - name: Fetch Active Instances (Terraform Output)
-        id: tf_outputs
-        run: |
-          # We need the Instance IDs where Docker is running.
-          # Assuming we fetch the 'service_inventory' from the state file or previous outputs.
-          # For robustness, we re-read the state file or rely on a known output structure.
-          
-          # NOTE: In a real scenario, you might want to fetch this from Terraform State directly
-          # or pass it along. Here we assume we fetch it from the state bucket for accuracy.
-          
-          aws s3 cp "s3://${{ secrets.AWS_TF_STATE_FILE_BUCKET }}/${{ secrets.AWS_TF_STATE_MANIFEST_FILE_PATH }}" state.json
-          # Simple extraction logic (mocked for this specific file, ideally use Terraform output)
-          # For now, we assume we deploy to ALL Docker instances found in the manifest.
-          
-          # Just passing a placeholder that Ansible will resolve using dynamic inventory or 'all'
-          echo "instance_ids=all" >> $GITHUB_OUTPUT
-
   deploy_to_ec2:
     name: Deploy & Configure Nginx
     needs: determine_deployment_strategy
@@ -103,12 +86,12 @@ jobs:
           chmod 600 .vault_pass
 
       - name: Run Ansible Deployment Playbook
-        working-directory: ansible/docker/config
+        # UPDATED: Correct path to the nginx config directory
+        working-directory: ansible/nginx/config
         env:
           ANSIBLE_HOST_KEY_CHECKING: "False"
         run: |
-          # Retrieve target instances. In production, this should be specific IDs.
-          # Here we use the inventory logic from previous steps or 'all' if defined in hosts.
+          # The playbook is now expected to be in ansible/nginx/config/project_mapping.yaml
           
           ansible-playbook project_mapping.yaml \
             -i "i-078ce0691ad4f093d," \
@@ -119,6 +102,6 @@ jobs:
             -e "is_mapped=${{ needs.determine_deployment_strategy.outputs.is_mapped }}" \
             -e "endpoint=${{ env.ENDPOINT }}"
 
-      - name: Clean Cleanup
+      - name: Cleanup
         if: always()
         run: rm -f .vault_pass
