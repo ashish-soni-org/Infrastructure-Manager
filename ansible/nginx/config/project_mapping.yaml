@@ -1,0 +1,117 @@
+- name: Deploy Docker Service and Configure Nginx
+  hosts: all
+  gather_facts: false
+  become: true
+
+  vars_files:
+    - ../../secrets/secrets.yml
+
+  vars:
+    ansible_connection: "{{ ANSIBLE_CONNECTION }}"
+    ansible_aws_ssm_bucket_name: "{{ ANSIBLE_AWS_SSM_BUCKET_NAME }}"
+    ansible_aws_ssm_region: "{{ ANSIBLE_AWS_SSM_REGION }}"
+    
+    # Directories
+    WORKDIR: /home/ubuntu/nginx_config_creation_scripts
+    NGINX_ENABLED: /etc/nginx/sites-enabled
+    
+    # Dynamic Variables (Passed from CI/CD via -e)
+    # repo_name: "my-repo"
+    # image_uri: "12345.dkr.ecr.../repo:latest"
+    # proxy_target: "http://127.0.0.1:8080/"  (The full target URL)
+    # is_mapped: true/false (String or Bool)
+    # endpoint: "/my-repo"
+
+  tasks:
+    - name: Wait for connection
+      ansible.builtin.wait_for_connection:
+        timeout: 300
+
+    # ---------------------------------------------------------
+    # 1. IDENTIFY NGINX CONFIGURATION FILE
+    # ---------------------------------------------------------
+    - name: Check if Default Nginx config exists
+      ansible.builtin.stat:
+        path: "{{ NGINX_ENABLED }}/default"
+      register: default_config
+
+    - name: Determine Active Nginx Config File
+      ansible.builtin.shell: |
+        if [ -f "{{ NGINX_ENABLED }}/default" ]; then
+          echo "{{ NGINX_ENABLED }}/default"
+        else
+          # Find the first file in sites-enabled that isn't 'default'
+          find {{ NGINX_ENABLED }} -type l -not -name "default" | head -n 1
+        fi
+      register: nginx_config_path
+      changed_when: false
+
+    - name: Set Config File Fact
+      ansible.builtin.set_fact:
+        active_config_file: "{{ nginx_config_path.stdout }}"
+
+    - name: Fail if no Nginx config found
+      ansible.builtin.fail:
+        msg: "No active Nginx configuration file found in {{ NGINX_ENABLED }}"
+      when: active_config_file == ""
+
+    # ---------------------------------------------------------
+    # 2. DOCKER LIFECYCLE MANAGEMENT
+    # ---------------------------------------------------------
+    
+    - name: Log into ECR
+      ansible.builtin.shell: |
+        aws ecr get-login-password --region {{ ansible_aws_ssm_region }} | docker login --username AWS --password-stdin {{ image_uri.split('/')[0] }}
+      no_log: true
+
+    - name: Stop and Remove Existing Container (Force Cleanup)
+      community.docker.docker_container:
+        name: "{{ repo_name }}"
+        state: absent
+        force_kill: true
+      # We do this regardless of 'is_mapped' to ensure we run the fresh image
+      
+    - name: Pull New Docker Image
+      community.docker.docker_image:
+        name: "{{ image_uri }}"
+        source: pull
+        force_source: true
+
+    - name: Run New Docker Container
+      community.docker.docker_container:
+        name: "{{ repo_name }}"
+        image: "{{ image_uri }}"
+        state: started
+        restart_policy: always
+        # Extract port from proxy_target (e.g., http://127.0.0.1:8080/ -> 8080)
+        # Mapping HostPort:ContainerPort (Assuming app runs on 80 inside container)
+        ports:
+          - "{{ proxy_target | regex_search(':[0-9]+') | replace(':','') }}:80"
+
+    # ---------------------------------------------------------
+    # 3. NGINX MAPPING (ONLY IF NOT MAPPED)
+    # ---------------------------------------------------------
+
+    - name: Upload Mapping Script
+      ansible.builtin.copy:
+        src: add_nginx_mapping.sh
+        dest: "{{ WORKDIR }}/add_nginx_mapping.sh"
+        mode: '0755'
+      when: not is_mapped | bool
+
+    - name: Inject Nginx Mapping
+      ansible.builtin.shell: |
+        ./add_nginx_mapping.sh "{{ active_config_file }}" "{{ endpoint }}" "{{ proxy_target }}"
+      args:
+        chdir: "{{ WORKDIR }}"
+      when: not is_mapped | bool
+
+    - name: Check Nginx Syntax
+      ansible.builtin.command: nginx -t
+      when: not is_mapped | bool
+
+    - name: Reload Nginx
+      ansible.builtin.service:
+        name: nginx
+        state: reloaded
+      when: not is_mapped | bool
