@@ -33,7 +33,7 @@ resource "aws_subnet" "SUBNET" {
   for_each                = local.subnets
   vpc_id                  = aws_vpc.VPC[each.value.vpc_name].id
   cidr_block              = each.value.cidr_block
-  map_public_ip_on_launch = true # Ensure instances get public IPs for Ansible access
+  map_public_ip_on_launch = true
   tags                    = { Name = each.value.name }
 }
 
@@ -49,7 +49,6 @@ resource "aws_security_group" "WEB_SG" {
   description = "Allow HTTP/HTTPS"
   vpc_id      = aws_vpc.VPC[each.key].id
 
-  # Inbound HTTP
   ingress {
     from_port   = 80
     to_port     = 80
@@ -57,7 +56,6 @@ resource "aws_security_group" "WEB_SG" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 
-  # Inbound HTTPS
   ingress {
     from_port   = 443
     to_port     = 443
@@ -65,7 +63,6 @@ resource "aws_security_group" "WEB_SG" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 
-  # Outbound All
   egress {
     from_port   = 0
     to_port     = 0
@@ -117,7 +114,6 @@ resource "random_id" "BUCKET_SUFFIX" {
 
 resource "aws_s3_bucket" "S3_BUCKET" {
   for_each = local.s3_buckets
-  # S3 bucket names must be globally unique
   bucket   = "${each.value.name}-${random_id.BUCKET_SUFFIX[each.key].hex}"
   force_destroy = true 
   tags     = { Name = each.value.name }

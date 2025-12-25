@@ -4,8 +4,13 @@ on:
   repository_dispatch:
     types: [event-provision-infra]
 
+permissions:
+  id-token: write
+  contents: read
+
 env:
   OWNER: "ashish-soni-org"
+  # JSON Array of target repos
   TARGETED_REPOS: '["Vehicle-Insurance-Eligibility-Prediction", "My-Website"]'
 
 jobs:
@@ -50,24 +55,21 @@ jobs:
         run: |
           set -e
           
-          # 1. Fetch existing manifest state
+          # 1. Backup existing manifest (Optional / Audit purpose)
           if aws s3 ls "s3://${{ secrets.AWS_TF_STATE_FILE_BUCKET }}/${{ secrets.AWS_TF_STATE_MANIFEST_FILE_PATH }}" > /dev/null 2>&1; then
-            aws s3 cp "s3://${{ secrets.AWS_TF_STATE_FILE_BUCKET }}/${{ secrets.AWS_TF_STATE_MANIFEST_FILE_PATH }}" old.json
-          else
-            echo "[]" > old.json
+            aws s3 cp "s3://${{ secrets.AWS_TF_STATE_FILE_BUCKET }}/${{ secrets.AWS_TF_STATE_MANIFEST_FILE_PATH }}" backup_previous_state.json
           fi
 
           # 2. Process incoming manifest payload
-          echo '${{ toJson(github.event.client_payload.manifest) }}' > new.json
+          # The UI sends the FULL state. We treat this as the source of truth (Replace, don't Merge).
+          echo '${{ toJson(github.event.client_payload.manifest) }}' > current_state.json
 
-          # 3. Merge manifests
-          jq -s '.[0] + .[1]' old.json new.json > merged.json
+          # 3. Update Remote State
+          aws s3 cp current_state.json "s3://${{ secrets.AWS_TF_STATE_FILE_BUCKET }}/${{ secrets.AWS_TF_STATE_MANIFEST_FILE_PATH }}"
 
-          # 4. Update Remote State
-          aws s3 cp merged.json "s3://${{ secrets.AWS_TF_STATE_FILE_BUCKET }}/${{ secrets.AWS_TF_STATE_MANIFEST_FILE_PATH }}"
-
-          # 5. Generate Terraform Variables
-          echo "{\"ui_manifest\": $(cat merged.json)}" > terraform.tfvars.json
+          # 4. Generate Terraform Variables
+          # Pass the JSON object directly to the variable
+          echo "{\"ui_manifest\": $(cat current_state.json)}" > terraform.tfvars.json
 
       - name: Terraform Init
         run: |
@@ -93,12 +95,14 @@ jobs:
       - name: Analyze Required Services
         id: service_check
         run: |
-          # Parse the merged manifest to determine subsequent workflows
-          ATTACH_RUNNER=$(jq '[.ui_manifest[].subnets[].resources[] | select(.type=="EC2").instances[].services[] | select(. == "Self-Hosted-Runner")] | length > 0' terraform.tfvars.json)
-          NGINX=$(jq '[.ui_manifest[].subnets[].resources[] | select(.type=="EC2").instances[].services[] | select(. == "NGINX")] | length > 0' terraform.tfvars.json)
-          MAP_DOMAIN=$(jq '[.ui_manifest[].subnets[].resources[] | select(.type=="EC2").instances[].services[] | select(. == "Map Domain")] | length > 0' terraform.tfvars.json)
-          DOCKER=$(jq '[.ui_manifest[].subnets[].resources[] | select(.type=="EC2").instances[].services[] | select(. == "Docker")] | length > 0' terraform.tfvars.json)
-          MINIKUBE=$(jq '[.ui_manifest[].subnets[].resources[] | select(.type=="EC2").instances[].services[] | select(. == "MiniKube")] | length > 0' terraform.tfvars.json)
+          # Parse the manifest via tfvars to determine subsequent workflows.
+          # NOTE: Structure is now .ui_manifest.vpcs[].subnets...
+          
+          ATTACH_RUNNER=$(jq '[.ui_manifest.vpcs[].subnets[].resources[] | select(.type=="EC2").instances[].services[] | select(. == "Self-Hosted-Runner")] | length > 0' terraform.tfvars.json)
+          NGINX=$(jq '[.ui_manifest.vpcs[].subnets[].resources[] | select(.type=="EC2").instances[].services[] | select(. == "NGINX")] | length > 0' terraform.tfvars.json)
+          MAP_DOMAIN=$(jq '[.ui_manifest.vpcs[].subnets[].resources[] | select(.type=="EC2").instances[].services[] | select(. == "Map Domain")] | length > 0' terraform.tfvars.json)
+          DOCKER=$(jq '[.ui_manifest.vpcs[].subnets[].resources[] | select(.type=="EC2").instances[].services[] | select(. == "Docker")] | length > 0' terraform.tfvars.json)
+          MINIKUBE=$(jq '[.ui_manifest.vpcs[].subnets[].resources[] | select(.type=="EC2").instances[].services[] | select(. == "MiniKube")] | length > 0' terraform.tfvars.json)
           
           echo "attach_runner=$ATTACH_RUNNER" >> $GITHUB_OUTPUT
           echo "run_nginx=$NGINX" >> $GITHUB_OUTPUT
@@ -455,10 +459,10 @@ jobs:
         run: rm -f .vault_pass
 
   # ----------------------------------------------------
-  #             PING TO BUILD OTHER REPOS
+  #             REPO COMMUNICATION
   # ----------------------------------------------------
             
-  build_website_and_projects:
+  deploy_website_and_projects:
     name: Trigger External Repository Builds
     needs: [hosting_runner, configure_nginx, startup_service_docker]
     if: success() 
@@ -476,7 +480,7 @@ jobs:
       - name: Trigger Repositories
         run: |
           echo '${{ env.TARGETED_REPOS }}' | jq -r '.[]' | while read REPO; do
-            echo "Triggering build for: $REPO"
+            echo "🚀 Triggering build for: $REPO"
             
             HTTP_RESPONSE=$(curl -X POST -s -o response.txt -w "%{http_code}" \
               -H "Authorization: Bearer ${{ steps.app-token.outputs.token }}" \
@@ -485,10 +489,10 @@ jobs:
               -d '{"event_type":"event-on-demand-build","client_payload":{"from":"provision-infra-pipeline"}}')
             
             if [ "$HTTP_RESPONSE" != "204" ]; then
-              echo "Failed to trigger $REPO. HTTP Status: $HTTP_RESPONSE"
+              echo "❌ Failed to trigger $REPO. HTTP Status: $HTTP_RESPONSE"
               cat response.txt
               exit 1
             else
-              echo "Successfully triggered $REPO"
+              echo "✅ Successfully triggered $REPO"
             fi
           done
