@@ -48,19 +48,19 @@ jobs:
             echo "[]" > old.json
           fi
 
-          # 2. Process the incoming JSON payload
-          # We treat the input 'services' as a raw JSON structure (List of Objects)
-          # instead of a semicolon-separated string.
-          echo '${{ github.event.client_payload.services }}' > new.json
+          # 2. Process the incoming JSON payload SAFELY
+          # We use toJSON() to ensure the output is valid JSON, preventing jq parse errors.
+          echo '${{ toJSON(github.event.client_payload.services) }}' > new.json
 
-          # 3. Validate JSON structure (Simple check to ensure it's an array)
+          # 3. Validate JSON structure
+          # Terraform expects an Array of Objects. If it's not an array, fail early with a clear message.
           if ! jq -e 'type == "array"' new.json > /dev/null; then
-            echo "Error: Input payload must be a JSON array of VPC objects."
+            echo "::error::Input payload must be a JSON Array of VPC objects. Received: $(cat new.json)"
             exit 1
           fi
 
           # 4. Merge old and new manifests
-          # This appends the new VPC objects to the existing list and removes duplicates based on content
+          # This appends the new VPC objects to the existing list and removes duplicates
           jq -s 'add | unique' old.json new.json > merged.json
 
           # 5. Persist updated manifest back to S3
