@@ -32,7 +32,7 @@
           - tar
           - libdigest-sha-perl
           - libicu-dev
-          - acl  # Added 'acl' to support complex permission handling if needed
+          - acl
         state: present
         update_cache: yes
       when: ansible_os_family == "Debian"
@@ -61,10 +61,16 @@
         group: "{{ runner_user }}"
         remote_src: true
 
+    # FIX: Extract GitHub Org Name cleanly using Python split to avoid Regex escaping issues.
+    # URL structure: https://github.com/ORG_NAME/REPO_NAME
+    # Split results: ['', '', 'github.com', 'ORG_NAME', 'REPO_NAME'] -> Index 3
+    - name: Extract GitHub Organization Name
+      ansible.builtin.set_fact:
+        github_org: "{{ REPO_URL.split('/')[3] }}"
+
     - name: Get GitHub Organization Runner Registration Token
       ansible.builtin.uri:
-        # Regex extracts the organization name from the repo URL
-        url: "{{ REPO_URL | regex_replace('https://github.com/([^/]+)/.*', 'https://api.github.com/orgs/\\1') }}/actions/runners/registration-token"
+        url: "https://api.github.com/orgs/{{ github_org }}/actions/runners/registration-token"
         method: POST
         headers:
           Authorization: "Bearer {{ GITHUB_TOKEN }}"
@@ -85,12 +91,11 @@
 
     - name: Configure the runner
       ansible.builtin.command:
-        # FIX: We run the command as root (play level become: true) but invoke 'sudo -u' 
-        # to execute the script as the runner user. This avoids Ansible 'become_user' 
-        # temp file permission errors on restricted filesystems.
+        # Uses the clean 'github_org' variable to construct the valid URL.
+        # Still uses 'sudo -u' to prevent permission errors on temp files.
         cmd: >
           sudo -u {{ runner_user }} ./config.sh
-          --url "https://github.com/{{ REPO_URL | regex_replace('https://github.com/([^/]+)/.*', '\\1') }}"
+          --url "https://github.com/{{ github_org }}"
           --token {{ runner_token }}
           --runnergroup "Production_Runners"
           --name "self-hosted-runner-{{ inventory_hostname }}"
@@ -100,7 +105,6 @@
           --replace
       args:
         chdir: "{{ runner_base_path }}"
-      # IMPORTANT: 'become_user' is removed here to prevent the permission error.
       when: not runner_config_file.stat.exists
 
     - name: Install the runner service
@@ -109,7 +113,6 @@
       args:
         chdir: "{{ runner_base_path }}"
       register: service_install
-      # Fail if error, but ignore if service already exists
       failed_when: 
         - service_install.rc != 0 
         - "'already exists' not in service_install.stderr"
@@ -121,7 +124,6 @@
       args:
         chdir: "{{ runner_base_path }}"
       register: service_start
-      # Fail if error, but ignore if already running
       failed_when: 
         - service_start.rc != 0 
         - "'active' not in service_start.stdout"
