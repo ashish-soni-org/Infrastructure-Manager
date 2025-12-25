@@ -370,7 +370,7 @@ jobs:
         if: always()
         run: rm -f .vault_pass
   
-  SSL CERTIFICATION
+  # SSL CERTIFICATION
   ssl_certified:
     name: Obtain SSL (Certbot)
     needs: [resource_provision, configure_nginx, dns_mapping]
