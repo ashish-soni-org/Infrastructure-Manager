@@ -371,133 +371,133 @@ jobs:
         run: rm -f .vault_pass
   
   # SSL CERTIFICATION
-  ssl_certified:
-    name: Obtain SSL (Certbot)
-    needs: [resource_provision, configure_nginx, dns_mapping]
-    if: needs.resource_provision.outputs.map_domain == 'true'
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: ansible/nginx/config
-    steps:
-      - uses: actions/checkout@v4
+  # ssl_certified:
+  #   name: Obtain SSL (Certbot)
+  #   needs: [resource_provision, configure_nginx, dns_mapping]
+  #   if: needs.resource_provision.outputs.map_domain == 'true'
+  #   runs-on: ubuntu-latest
+  #   defaults:
+  #     run:
+  #       working-directory: ansible/nginx/config
+  #   steps:
+  #     - uses: actions/checkout@v4
 
-      - uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ secrets.AWS_REGION_NAME }}
+  #     - uses: aws-actions/configure-aws-credentials@v4
+  #       with:
+  #         aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+  #         aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+  #         aws-region: ${{ secrets.AWS_REGION_NAME }}
 
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
+  #     - uses: actions/setup-python@v5
+  #       with:
+  #         python-version: "3.12"
 
-      - name: Install Dependencies
-        run: pip install ansible boto3 botocore
+  #     - name: Install Dependencies
+  #       run: pip install ansible boto3 botocore
 
-      - name: Create Vault Pass
-        run: |
-          echo "${{ secrets.VAULT_PASSWORD }}" > .vault_pass
-          chmod 600 .vault_pass
+  #     - name: Create Vault Pass
+  #       run: |
+  #         echo "${{ secrets.VAULT_PASSWORD }}" > .vault_pass
+  #         chmod 600 .vault_pass
 
-      - name: Run Ansible Playbook
-        env:
-          ANSIBLE_HOST_KEY_CHECKING: "False"
-        run: |
-          IDS=$(echo '${{ needs.resource_provision.outputs.map_domain_inventory }}' | jq -r '.[].instance_id' | paste -sd "," -)
-          DNS_PAYLOAD=$(echo '${{ needs.resource_provision.outputs.map_domain_inventory }}' | jq -c '.')
+  #     - name: Run Ansible Playbook
+  #       env:
+  #         ANSIBLE_HOST_KEY_CHECKING: "False"
+  #       run: |
+  #         IDS=$(echo '${{ needs.resource_provision.outputs.map_domain_inventory }}' | jq -r '.[].instance_id' | paste -sd "," -)
+  #         DNS_PAYLOAD=$(echo '${{ needs.resource_provision.outputs.map_domain_inventory }}' | jq -c '.')
           
-          ansible-playbook \
-            -i "$IDS," \
-            ssl_certified.yaml --vault-password-file .vault_pass \
-            -e "dns_instances=$DNS_PAYLOAD"
+  #         ansible-playbook \
+  #           -i "$IDS," \
+  #           ssl_certified.yaml --vault-password-file .vault_pass \
+  #           -e "dns_instances=$DNS_PAYLOAD"
 
-      - name: Cleanup
-        if: always()
-        run: rm -f .vault_pass
+  #     - name: Cleanup
+  #       if: always()
+  #       run: rm -f .vault_pass
 
-  # ----------------------------------------------------
-  #             STARTUP SERVICES
-  # ----------------------------------------------------
+  # # ----------------------------------------------------
+  # #             STARTUP SERVICES
+  # # ----------------------------------------------------
   
-  # DOCKER CONFIGURATION
-  startup_service_docker:
-    name: Configure Docker Containers
-    needs: [resource_provision, install_docker]
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: ansible/docker/config
-    steps:
-      - uses: actions/checkout@v4
+  # # DOCKER CONFIGURATION
+  # startup_service_docker:
+  #   name: Configure Docker Containers
+  #   needs: [resource_provision, install_docker]
+  #   runs-on: ubuntu-latest
+  #   defaults:
+  #     run:
+  #       working-directory: ansible/docker/config
+  #   steps:
+  #     - uses: actions/checkout@v4
 
-      - uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ secrets.AWS_REGION_NAME }}
+  #     - uses: aws-actions/configure-aws-credentials@v4
+  #       with:
+  #         aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+  #         aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+  #         aws-region: ${{ secrets.AWS_REGION_NAME }}
 
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
+  #     - uses: actions/setup-python@v5
+  #       with:
+  #         python-version: "3.12"
 
-      - name: Install Dependencies
-        run: pip install ansible boto3 botocore
+  #     - name: Install Dependencies
+  #       run: pip install ansible boto3 botocore
 
-      - name: Create Vault Pass
-        run: |
-          echo "${{ secrets.VAULT_PASSWORD }}" > .vault_pass
-          chmod 600 .vault_pass
+  #     - name: Create Vault Pass
+  #       run: |
+  #         echo "${{ secrets.VAULT_PASSWORD }}" > .vault_pass
+  #         chmod 600 .vault_pass
 
-      - name: Run Ansible Playbook
-        env:
-          ANSIBLE_HOST_KEY_CHECKING: "False"
-        run: |
-          IDS=$(echo '${{ needs.resource_provision.outputs.service_inventory }}' | jq -r '."Docker"')          
+  #     - name: Run Ansible Playbook
+  #       env:
+  #         ANSIBLE_HOST_KEY_CHECKING: "False"
+  #       run: |
+  #         IDS=$(echo '${{ needs.resource_provision.outputs.service_inventory }}' | jq -r '."Docker"')          
           
-          ansible-playbook \
-            -i "$IDS," \
-            docker_configuration.yaml --vault-password-file .vault_pass
+  #         ansible-playbook \
+  #           -i "$IDS," \
+  #           docker_configuration.yaml --vault-password-file .vault_pass
 
-      - name: Cleanup
-        if: always()
-        run: rm -f .vault_pass
+  #     - name: Cleanup
+  #       if: always()
+  #       run: rm -f .vault_pass
 
-  # ----------------------------------------------------
-  #             PING -  BUILD PROJECTS
-  # ----------------------------------------------------
+  # # ----------------------------------------------------
+  # #             PING -  BUILD PROJECTS
+  # # ----------------------------------------------------
             
-  deploy_website_and_projects:
-    name: Trigger Repository Builds
-    # needs: [hosting_runner, configure_nginx, startup_service_docker]
-    # if: success() 
-    runs-on: ubuntu-latest
-    steps:
-      - name: Generate GitHub App Token
-        id: app-token
-        uses: actions/create-github-app-token@v1
-        with:
-          app-id: ${{ secrets.GH_APP_ID }}
-          private-key: ${{ secrets.GH_APP_PRIVATE_KEY }}
-          owner: ${{ env.OWNER }}
-          repositories: ${{ join(fromJSON(env.TARGETED_REPOS), ',') }}
+  # deploy_website_and_projects:
+  #   name: Trigger Repository Builds
+  #   # needs: [hosting_runner, configure_nginx, startup_service_docker]
+  #   # if: success() 
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - name: Generate GitHub App Token
+  #       id: app-token
+  #       uses: actions/create-github-app-token@v1
+  #       with:
+  #         app-id: ${{ secrets.GH_APP_ID }}
+  #         private-key: ${{ secrets.GH_APP_PRIVATE_KEY }}
+  #         owner: ${{ env.OWNER }}
+  #         repositories: ${{ join(fromJSON(env.TARGETED_REPOS), ',') }}
 
-      - name: Trigger Repositories
-        run: |
-          echo '${{ env.TARGETED_REPOS }}' | jq -r '.[]' | while read REPO; do
-            echo "Triggering build for: $REPO"
+  #     - name: Trigger Repositories
+  #       run: |
+  #         echo '${{ env.TARGETED_REPOS }}' | jq -r '.[]' | while read REPO; do
+  #           echo "Triggering build for: $REPO"
             
-            HTTP_RESPONSE=$(curl -X POST -s -o response.txt -w "%{http_code}" \
-              -H "Authorization: Bearer ${{ steps.app-token.outputs.token }}" \
-              -H "Accept: application/vnd.github.v3+json" \
-              "https://api.github.com/repos/${{ env.OWNER }}/$REPO/dispatches" \
-              -d '{"event_type":"event-on-demand-build","client_payload":{"from":"provision-infra-pipeline"}}')
+  #           HTTP_RESPONSE=$(curl -X POST -s -o response.txt -w "%{http_code}" \
+  #             -H "Authorization: Bearer ${{ steps.app-token.outputs.token }}" \
+  #             -H "Accept: application/vnd.github.v3+json" \
+  #             "https://api.github.com/repos/${{ env.OWNER }}/$REPO/dispatches" \
+  #             -d '{"event_type":"event-on-demand-build","client_payload":{"from":"provision-infra-pipeline"}}')
             
-            if [ "$HTTP_RESPONSE" != "204" ]; then
-              echo "Failed to trigger $REPO. HTTP Status: $HTTP_RESPONSE"
-              cat response.txt
-              exit 1
-            else
-              echo "Successfully triggered $REPO"
-            fi
-          done
+  #           if [ "$HTTP_RESPONSE" != "204" ]; then
+  #             echo "Failed to trigger $REPO. HTTP Status: $HTTP_RESPONSE"
+  #             cat response.txt
+  #             exit 1
+  #           else
+  #             echo "Successfully triggered $REPO"
+  #           fi
+  #         done
