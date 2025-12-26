@@ -296,6 +296,7 @@ jobs:
 
       - name: Run Ansible Playbook
         env:
+          ANSIBLE_CONFIG: "../ansible.cfg"
           ANSIBLE_HOST_KEY_CHECKING: "False"
         run: |
           IDS=$(echo '${{ needs.resource_provision.outputs.map_domain_inventory }}' | jq -r '.[].instance_id' | paste -sd "," -)
@@ -344,6 +345,7 @@ jobs:
 
       - name: Run Ansible Playbook
         env:
+          ANSIBLE_CONFIG: "../ansible.cfg"
           ANSIBLE_HOST_KEY_CHECKING: "False"
         run: |
           # 1. Target ALL NGINX instances (from service_inventory), not just domain-mapped ones
@@ -402,6 +404,7 @@ jobs:
 
   #     - name: Run Ansible Playbook
   #       env:
+          # ANSIBLE_CONFIG: "../ansible.cfg"
   #         ANSIBLE_HOST_KEY_CHECKING: "False"
   #       run: |
   #         IDS=$(echo '${{ needs.resource_provision.outputs.map_domain_inventory }}' | jq -r '.[].instance_id' | paste -sd "," -)

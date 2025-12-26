@@ -62,9 +62,21 @@
     
     - name: Configre Docker for Repositories
       ansible.builtin.shell: 
-        cmd: "./startup_script.sh '{{ FILE_PATH }}' '{{ LOG_FILE_NAME }}' '{{ STARTUP_FILE_NAME }}' '{{ REGION }}' '{{ USERNAME }}' '{{ ECR }}' '{{ CONTAINERS }}' '{{ MAPPED_PORTS }}'"
+        # FIX: Explicitly use /bin/bash to execute the script
+        cmd: >
+          /bin/bash ./startup_script.sh 
+          "{{ WORKDIR }}" 
+          "{{ LOG_FILE_NAME }}" 
+          "{{ STARTUP_FILE_NAME }}" 
+          "{{ REGION }}" 
+          "{{ USERNAME }}" 
+          "{{ ECR }}" 
+          "{{ CONTAINERS }}" 
+          "{{ MAPPED_PORTS }}"
       args:
         chdir: "{{ WORKDIR }}"
+      become: true
+      become_user: "{{ ansible_user }}"
 
     - name: Enable and start startup service
       ansible.builtin.systemd:
