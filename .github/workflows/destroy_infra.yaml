@@ -4,6 +4,9 @@ on:
   repository_dispatch:
     types: [event-destroy-infra]
 
+env:
+  ACTION_TYPE: "DESTROY_INFRA"
+
 jobs:
   # ----------------------------------------------------
   #             RESOURCE DESTROY
@@ -55,6 +58,9 @@ jobs:
   # ----------------------------------------------------
   #             CLEAR SECRETS MANAGER
   # ----------------------------------------------------
+  # ----------------------------------------------------
+  #             CLEAR SECRETS MANAGER
+  # ----------------------------------------------------
   clear_secrets:
     name: Clear Secrets Manager
     needs: resource_destroy
@@ -80,8 +86,8 @@ jobs:
           aws-region: ${{ secrets.AWS_REGION_NAME }}
 
       - name: Clear AWS Secret
-        run: python ../../.github/workflows/secretsManager.py
+        run: python secretsManager.py
         env:
           AWS_REGION: ${{ secrets.AWS_REGION_NAME }}
-          SECRET_FILE_NAME: ${{ secrets.SECRETS_FILE_NAME }}
-          ACTION_TYPE: "DESTROY_INFRA"
+          SECRET_FILE_NAME: ${{ secrets.SECRET_FILE_NAME }}
+          ACTION_TYPE: ${{ env.ACTION_TYPE }}
