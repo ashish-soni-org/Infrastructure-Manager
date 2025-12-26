@@ -16,6 +16,7 @@ CREATE_FILE_STRUCTURE = "CREATE_FILE_STRUCTURE"
 SERVICE_REQUEST = "SERVICE_REQUEST"
 ADD_SERVICES = "ADD_SERVICES"
 CHECK_MAPPING = "CHECK_MAPPING"
+DESTROY_INFRA = "DESTROY_INFRA"  # NEW CONSTANT
 
 def get_client():
     return boto3.client("secretsmanager", region_name=REGION)
@@ -24,7 +25,13 @@ def handle_secret():
     client = get_client()
     
     try:
-        # 1. Fetch Existing Secret
+        # For DESTROY_INFRA, we don't need to fetch existing data, just overwrite
+        if ACTION == DESTROY_INFRA:
+            client.put_secret_value(SecretId=SECRET_NAME, SecretString="{}")
+            print(f"SUCCESS: Secret {SECRET_NAME} has been cleared to {{}}.")
+            return
+
+        # 1. Fetch Existing Secret (For all other actions)
         full_data = {
             "proxy": "http://127.0.0.1/",
             "max_port_used": "7999",

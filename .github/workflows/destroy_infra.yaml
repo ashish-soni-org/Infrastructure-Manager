@@ -5,7 +5,6 @@ on:
     types: [event-destroy-infra]
 
 jobs:
-
   # ----------------------------------------------------
   #             RESOURCE DESTROY
   # ----------------------------------------------------
@@ -42,8 +41,6 @@ jobs:
 
       - name: Prepare Destroy Context
         run: |
-          # Create an empty manifest variable file to satisfy Terraform validation
-          # during the destroy phase, even if variables are required.
           echo '{"ui_manifest": []}' > terraform.tfvars.json
 
       - name: Terraform Destroy
@@ -54,3 +51,37 @@ jobs:
         run: |
           echo "[]" > empty.json
           aws s3 cp empty.json "s3://${{ secrets.AWS_TF_STATE_FILE_BUCKET }}/${{ secrets.AWS_TF_STATE_MANIFEST_FILE_PATH }}"
+
+  # ----------------------------------------------------
+  #             CLEAR SECRETS MANAGER
+  # ----------------------------------------------------
+  clear_secrets:
+    name: Clear Secrets Manager
+    needs: resource_destroy
+    if: success()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install Dependencies
+        run: pip install boto3
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION_NAME }}
+
+      - name: Clear AWS Secret
+        run: python secretsManager.py
+        env:
+          AWS_REGION: ${{ secrets.AWS_REGION_NAME }}
+          SECRET_FILE_NAME: ${{ secrets.AWS_SECRETS_MANAGER_NAME }}
+          ACTION_TYPE: "DESTROY_INFRA"
