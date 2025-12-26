@@ -86,7 +86,7 @@ jobs:
           aws-region: ${{ secrets.AWS_REGION_NAME }}
 
       - name: Clear AWS Secret
-        run: python secretsManager.py
+        run: python .github/workflows/secretsManager.py
         env:
           AWS_REGION: ${{ secrets.AWS_REGION_NAME }}
           SECRET_FILE_NAME: ${{ secrets.SECRET_FILE_NAME }}
