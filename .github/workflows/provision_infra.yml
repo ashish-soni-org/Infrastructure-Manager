@@ -456,20 +456,18 @@ jobs:
           ANSIBLE_CONFIG: "../../ansible.cfg"
           ANSIBLE_HOST_KEY_CHECKING: "False"
         run: |
+          # Define your dynamic variables here
+          CONTAINERS="portfolio project1 project2"
+          PORTS="8080:80 3000:3000 4000:4000"
           
           ansible-playbook \
             -i "i-054c1f3d156836a91," \
-            docker_configuration.yaml --vault-password-file .vault_pass
-        # run: |
-        #   IDS=$(echo '${{ needs.resource_provision.outputs.service_inventory }}' | jq -r '."Docker"')          
-          
-        #   ansible-playbook \
-        #     -i "$IDS," \
-        #     docker_configuration.yaml --vault-password-file .vault_pass
-
-      - name: Cleanup
-        if: always()
-        run: rm -f .vault_pass
+            docker_configuration.yaml \
+            --vault-password-file .vault_pass \
+            -e "ECR=ECR_REPOSITORY_URL" \
+            -e "REGION=${{ secrets.AWS_REGION_NAME }}" \
+            -e "CONTAINERS='CONTAINERS'" \
+            -e "MAPPED_PORTS='PORTS'"
 
   # ----------------------------------------------------
   #             PING -  BUILD PROJECTS

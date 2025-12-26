@@ -1,6 +1,5 @@
 - name: Creating Docker Startup Service
   hosts: all
-  gather_facts: true
   become: true
 
   vars_files:
@@ -10,8 +9,26 @@
     ansible_connection: "{{ ANSIBLE_CONNECTION }}"
     ansible_aws_ssm_bucket_name: "{{ ANSIBLE_AWS_SSM_BUCKET_NAME }}"
     ansible_aws_ssm_region: "{{ ANSIBLE_AWS_SSM_REGION }}"
-    WORKDIR: /home/ubuntu/docker_startup_creation_scripts
 
+    # -----------------------------------------------------------
+    # 1. PERMISSION & CONNECTION FIXES
+    # -----------------------------------------------------------
+    # Explicitly define the user to run scripts as
+    ansible_user: ubuntu
+    
+    # Force use of /tmp for temporary files (Essential for AWS SSM connections)
+    ansible_remote_tmp: /tmp/.ansible-${USER}/tmp
+
+    # -----------------------------------------------------------
+    # 2. SCRIPT CONFIGURATION VARIABLES (Restored)
+    # -----------------------------------------------------------
+    WORKDIR: /home/ubuntu/docker_startup_creation_scripts
+    LOG_FILE_NAME: startup.log
+    STARTUP_FILE_NAME: startup.sh
+    USERNAME: AWS
+    # NOTE: You must pass 'ECR', 'CONTAINERS', and 'MAPPED_PORTS' via -e in GitHub Actions
+    # OR define defaults here if they are static.
+    
   tasks:
     - name: Wait for connection
       ansible.builtin.wait_for_connection:
@@ -22,19 +39,24 @@
         path: "{{ WORKDIR }}"
         state: directory
         mode: '0755'
+        owner: "{{ ansible_user }}"
+        group: "{{ ansible_user }}"
 
     - name: Upload docker script file to server
       ansible.builtin.copy:
         src: startup_script.sh
-        dest: "{{ WORKDIR }}"
+        dest: "{{ WORKDIR }}/startup_script.sh"
         mode: '0755'
+        owner: "{{ ansible_user }}"
+        group: "{{ ansible_user }}"
 
     - name: Upload docker service file to server
       ansible.builtin.copy:
         src: startup.service
-        dest: /etc/systemd/system
-        mode: '0755'
+        dest: /etc/systemd/system/startup.service
+        mode: '0644'
 
+    # --- AWS CLI Installation ---
     - name: Install unzip
       ansible.builtin.apt:
         name: unzip
@@ -55,14 +77,15 @@
 
     - name: Run AWS CLI installer
       ansible.builtin.shell:
-        cmd: sudo ./aws/install --update
+        cmd: ./aws/install --update
         chdir: /tmp/
       register: aws_install_result
       changed_when: "'You can now run: /usr/local/bin/aws' in aws_install_result.stdout"
     
-    - name: Configre Docker for Repositories
+    # --- Generate Startup Script ---
+    - name: Configure Docker for Repositories
       ansible.builtin.shell: 
-        # FIX: Explicitly use /bin/bash to execute the script
+        # FIX: Explicitly use /bin/bash
         cmd: >
           /bin/bash ./startup_script.sh 
           "{{ WORKDIR }}" 
@@ -75,12 +98,12 @@
           "{{ MAPPED_PORTS }}"
       args:
         chdir: "{{ WORKDIR }}"
-      become: true
-      become_user: "{{ ansible_user }}"
+      # Run as root (default become: true) to avoid directory permission issues.
+      # The 'become_user' line was removed because root access is safer for this operation.
 
     - name: Enable and start startup service
       ansible.builtin.systemd:
         name: startup.service
         enabled: true
         daemon_reload: true
-        state: started
+        state: restarted
