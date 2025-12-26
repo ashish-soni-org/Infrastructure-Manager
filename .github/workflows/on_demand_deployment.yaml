@@ -77,22 +77,34 @@ jobs:
           echo "${{ secrets.VAULT_PASSWORD }}" > .vault_pass
           chmod 600 .vault_pass
 
-      # 4. Run Ansible with Dynamic Inventory
+      # 4. Run Ansible with Hidden Variables
       - name: Run Ansible Deployment Playbook
         working-directory: ansible/nginx/config
+        # Map ALL sensitive values here. GitHub logs will show the variable names, not the values.
         env:
           ANSIBLE_HOST_KEY_CHECKING: "False"
+          # Inputs from Context
+          REPO_NAME: ${{ env.REPO_NAME }}
+          ENDPOINT: ${{ env.ENDPOINT }}
+          # Inputs from Steps
+          INSTANCE_IDS: ${{ steps.fetch_instances.outputs.instance_ids }}
+          ECR_REGISTRY: ${{ steps.login_ecr.outputs.registry }}
+          ECR_REPO_NAME: ${{ steps.check_mapping.outputs.ecr_repo_name }}
+          PROXY_TARGET: ${{ steps.check_mapping.outputs.proxy_target }}
+          IS_MAPPED: ${{ steps.check_mapping.outputs.is_mapped }}
         run: |
-          FULL_URI="${{ steps.login_ecr.outputs.registry }}/${{ steps.check_mapping.outputs.ecr_repo_name }}:latest"
+          # Construct URI using bash variables (The log will only show the variable names)
+          FULL_URI="${ECR_REGISTRY}/${ECR_REPO_NAME}:latest"
 
+          # Execute Ansible using bash variables
           ansible-playbook project_mapping.yaml \
-            -i "${{ steps.fetch_instances.outputs.instance_ids }}" \
+            -i "${INSTANCE_IDS}" \
             --vault-password-file ../../../.vault_pass \
-            -e "repo_name=${{ env.REPO_NAME }}" \
-            -e "image_uri=$FULL_URI" \
-            -e "proxy_target=${{ steps.check_mapping.outputs.proxy_target }}" \
-            -e "is_mapped=${{ steps.check_mapping.outputs.is_mapped }}" \
-            -e "endpoint=${{ env.ENDPOINT }}"
+            -e "repo_name=${REPO_NAME}" \
+            -e "image_uri=${FULL_URI}" \
+            -e "proxy_target=${PROXY_TARGET}" \
+            -e "is_mapped=${IS_MAPPED}" \
+            -e "endpoint=${ENDPOINT}"
 
       - name: Cleanup
         if: always()

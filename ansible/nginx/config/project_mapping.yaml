@@ -11,7 +11,8 @@
     ansible_aws_ssm_bucket_name: "{{ ANSIBLE_AWS_SSM_BUCKET_NAME }}"
     ansible_aws_ssm_region: "{{ ANSIBLE_AWS_SSM_REGION }}"
     WORKDIR: /home/ubuntu/nginx_config_creation_scripts
-    NGINX_ENABLED: /etc/nginx/sites-enabled
+    # UPDATED: Point to sites-available to edit actual files
+    NGINX_AVAILABLE: /etc/nginx/sites-available
 
   tasks:
     - name: Wait for connection
@@ -64,16 +65,16 @@
       ansible.builtin.command: "/tmp/aws/install --update"
       when: aws_cli_check.rc != 0
 
-    # 2. IDENTIFY NGINX CONFIG FILE
+    # 2. IDENTIFY NGINX CONFIG FILE (Updated to check sites-available)
     - name: Check for default config
       ansible.builtin.stat:
-        path: "{{ NGINX_ENABLED }}/default"
+        path: "{{ NGINX_AVAILABLE }}/default"
       register: default_conf
 
     - name: Find other config files
       ansible.builtin.find:
-        paths: "{{ NGINX_ENABLED }}"
-        file_type: any
+        paths: "{{ NGINX_AVAILABLE }}"
+        file_type: file
         recurse: no
         patterns: "*"
         excludes: "default"
@@ -84,14 +85,14 @@
       ansible.builtin.set_fact:
         active_config_file: >-
           {{
-            (NGINX_ENABLED ~ '/default')
+            (NGINX_AVAILABLE ~ '/default')
             if default_conf.stat.exists
             else (other_confs.files | map(attribute='path') | list | first | default(''))
           }}
 
     - name: Fail if no Nginx config found
       ansible.builtin.fail:
-        msg: "No active Nginx configuration file found in {{ NGINX_ENABLED }}"
+        msg: "No active Nginx configuration file found in {{ NGINX_AVAILABLE }}"
       when: active_config_file == ""
 
     # 3. DOCKER LIFECYCLE
