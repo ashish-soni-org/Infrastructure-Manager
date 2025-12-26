@@ -456,11 +456,16 @@ jobs:
           ANSIBLE_CONFIG: "../ansible.cfg"
           ANSIBLE_HOST_KEY_CHECKING: "False"
         run: |
-          IDS=$(echo '${{ needs.resource_provision.outputs.service_inventory }}' | jq -r '."Docker"')          
           
           ansible-playbook \
-            -i "$IDS," \
+            -i "i-054c1f3d156836a91," \
             docker_configuration.yaml --vault-password-file .vault_pass
+        # run: |
+        #   IDS=$(echo '${{ needs.resource_provision.outputs.service_inventory }}' | jq -r '."Docker"')          
+          
+        #   ansible-playbook \
+        #     -i "$IDS," \
+        #     docker_configuration.yaml --vault-password-file .vault_pass
 
       - name: Cleanup
         if: always()
@@ -470,38 +475,38 @@ jobs:
   #             PING -  BUILD PROJECTS
   # ----------------------------------------------------
             
-  deploy_website_and_projects:
-    name: Trigger Repository Builds
-    # needs: [hosting_runner, configure_nginx, startup_service_docker]
-    needs: [hosting_runner, configure_nginx]
-    if: success() 
-    runs-on: ubuntu-latest
-    steps:
-      - name: Generate GitHub App Token
-        id: app-token
-        uses: actions/create-github-app-token@v1
-        with:
-          app-id: ${{ secrets.GH_APP_ID }}
-          private-key: ${{ secrets.GH_APP_PRIVATE_KEY }}
-          owner: ${{ env.OWNER }}
-          repositories: ${{ join(fromJSON(env.TARGETED_REPOS), ',') }}
+  # deploy_website_and_projects:
+  #   name: Trigger Repository Builds
+  #   # needs: [hosting_runner, configure_nginx, startup_service_docker]
+  #   needs: [hosting_runner, configure_nginx]
+  #   if: success() 
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - name: Generate GitHub App Token
+  #       id: app-token
+  #       uses: actions/create-github-app-token@v1
+  #       with:
+  #         app-id: ${{ secrets.GH_APP_ID }}
+  #         private-key: ${{ secrets.GH_APP_PRIVATE_KEY }}
+  #         owner: ${{ env.OWNER }}
+  #         repositories: ${{ join(fromJSON(env.TARGETED_REPOS), ',') }}
 
-      - name: Trigger Repositories
-        run: |
-          echo '${{ env.TARGETED_REPOS }}' | jq -r '.[]' | while read REPO; do
-            echo "Triggering build for: $REPO"
+  #     - name: Trigger Repositories
+  #       run: |
+  #         echo '${{ env.TARGETED_REPOS }}' | jq -r '.[]' | while read REPO; do
+  #           echo "Triggering build for: $REPO"
             
-            HTTP_RESPONSE=$(curl -X POST -s -o response.txt -w "%{http_code}" \
-              -H "Authorization: Bearer ${{ steps.app-token.outputs.token }}" \
-              -H "Accept: application/vnd.github.v3+json" \
-              "https://api.github.com/repos/${{ env.OWNER }}/$REPO/dispatches" \
-              -d '{"event_type":"event-on-demand-build","client_payload":{"from":"provision-infra-pipeline"}}')
+  #           HTTP_RESPONSE=$(curl -X POST -s -o response.txt -w "%{http_code}" \
+  #             -H "Authorization: Bearer ${{ steps.app-token.outputs.token }}" \
+  #             -H "Accept: application/vnd.github.v3+json" \
+  #             "https://api.github.com/repos/${{ env.OWNER }}/$REPO/dispatches" \
+  #             -d '{"event_type":"event-on-demand-build","client_payload":{"from":"provision-infra-pipeline"}}')
             
-            if [ "$HTTP_RESPONSE" != "204" ]; then
-              echo "Failed to trigger $REPO. HTTP Status: $HTTP_RESPONSE"
-              cat response.txt
-              exit 1
-            else
-              echo "Successfully triggered $REPO"
-            fi
-          done
+  #           if [ "$HTTP_RESPONSE" != "204" ]; then
+  #             echo "Failed to trigger $REPO. HTTP Status: $HTTP_RESPONSE"
+  #             cat response.txt
+  #             exit 1
+  #           else
+  #             echo "Successfully triggered $REPO"
+  #           fi
+  #         done
