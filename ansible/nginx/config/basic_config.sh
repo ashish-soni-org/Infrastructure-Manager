@@ -52,10 +52,10 @@ server {
     # ------------------------------------------------------
 
     # [Default Fallback]
-    location / {
-        return 200 'Nginx is running. Configure Docker mappings in basic_config.sh.';
-        add_header Content-Type text/plain;
-    }
+    # location / {
+    #     return 200 'Nginx is running. Configure Docker mappings in basic_config.sh.';
+    #     add_header Content-Type text/plain;
+    # }
 }
 EOF
 
