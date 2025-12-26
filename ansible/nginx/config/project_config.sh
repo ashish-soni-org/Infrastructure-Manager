@@ -1,38 +1,47 @@
 #!/bin/bash
 
 # Arguments
-CONFIG_FILE=$1
+CONFIG_FILE=$(readlink -f "$1")
 ENDPOINT=$2
 PROXY_TARGET=$3  # e.g., http://127.0.0.1:8000/
-REPO_NAME=$4     # New: For Docker Container Name
-IMAGE_URI=$5     # New: For Docker Image
-STARTUP_SCRIPT=$6 # New: Path to startup.sh
+REPO_NAME=$4     # For Docker Container Name
+IMAGE_URI=$5     # For Docker Image
+STARTUP_SCRIPT=$6 # Path to startup.sh
 
-# Extract Port from Proxy Target (e.g., http://127.0.0.1:8000/ -> 8000)
+# Extract Port from Proxy Target
 HOST_PORT=$(echo "$PROXY_TARGET" | sed -e 's/.*:\([0-9]*\)\/.*/\1/')
 
-# Standard Headers needed for all mappings
+# Standard Headers
 PROXY_HEADERS=(
     "Host \$host"
     "X-Real-IP \$remote_addr"
 )
 
 # ==================================================================
-# PART 1: NGINX CONFIGURATION
+# PART 1: NGINX CONFIGURATION (WITH IDEMPOTENCY)
 # ==================================================================
 
-# 1. Determine Mapping Type
+# 1. Determine Mapping Type and Cleanup Target
 if [ "$ENDPOINT" == "/" ]; then
     COMMENT="# MAIN APP"
     LOCATION_PATH="/"
-    SED_MATCH="location \/ {"
     REWRITE_RULE="" 
+    # This matches the placeholder in your basic_config.sh OR an existing root block
+    DELETE_MATCH="\[Default Fallback\]|location \/ {"
 else
     CLEAN_NAME=$(echo "$ENDPOINT" | sed 's/^\///;s/\/$//')
     COMMENT="# PROJECT $CLEAN_NAME"
     LOCATION_PATH="^~ /$CLEAN_NAME/"
-    SED_MATCH="location \^~ \/$CLEAN_NAME\/ {"
     REWRITE_RULE="^/$CLEAN_NAME/(.*)$ /\$1 break"
+    DELETE_MATCH="location \^~ \/$CLEAN_NAME\/ {"
+fi
+
+# 2. CRITICAL: Remove existing block before adding new one
+# This prevents the "duplicate location" error and 502s
+if grep -qE "$DELETE_MATCH" "$CONFIG_FILE"; then
+    echo "Cleaning up existing Nginx block for $ENDPOINT..."
+    # Deletes from the match line until the first closing brace '}'
+    sed -i "/$DELETE_MATCH/,/}/d" "$CONFIG_FILE"
 fi
 
 # 3. Build Header String
@@ -58,13 +67,16 @@ NEW_MAPPING_BLOCK+="
 $PROXY_SET_HEADERS
     }"
 
-# 5. Inject into Nginx File
+# 5. Inject into Nginx File (inside the server block)
+# Remove the last line (the closing '}')
 head -n -1 "$CONFIG_FILE" > "$CONFIG_FILE.tmp"
+# Append new block
 echo "$NEW_MAPPING_BLOCK" >> "$CONFIG_FILE.tmp"
+# Restore the closing '}'
 echo "}" >> "$CONFIG_FILE.tmp"
 mv "$CONFIG_FILE.tmp" "$CONFIG_FILE"
 
-echo "Success: Nginx mapping added for $ENDPOINT"
+echo "Success: Nginx mapping updated for $ENDPOINT"
 
 # ==================================================================
 # PART 2: STARTUP SCRIPT UPDATE (PERSISTENCE)
@@ -73,12 +85,10 @@ echo "Success: Nginx mapping added for $ENDPOINT"
 if [ -f "$STARTUP_SCRIPT" ]; then
     # Check if this container is already in the startup script
     if grep -q "name $REPO_NAME " "$STARTUP_SCRIPT"; then
-        echo "Startup Script: Container $REPO_NAME already exists. Skipping."
+        echo "Startup Script: $REPO_NAME already exists. Skipping."
     else
         echo "Startup Script: Adding persistence for $REPO_NAME..."
         
-        # Define the Docker block to insert
-        # We use a temp file to handle special characters cleanly
         cat <<EOF > docker_block.tmp
 
 # --- Added by Deployment Pipeline ---
@@ -89,10 +99,8 @@ docker pull $IMAGE_URI >> \$LOG_FILE 2>&1
 docker run -d --name $REPO_NAME -p $HOST_PORT:5000 $IMAGE_URI >> \$LOG_FILE 2>&1
 EOF
         
-        # Insert the block immediately after the marker "# Execute Docker Operations"
-        # We use sed to append the contents of docker_block.tmp after the match
+        # Insert after the marker
         sed -i "/# Execute Docker Operations/r docker_block.tmp" "$STARTUP_SCRIPT"
-        
         rm docker_block.tmp
         echo "Success: Added $REPO_NAME to startup.sh"
     fi
