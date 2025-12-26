@@ -127,12 +127,11 @@ def handle_secret():
                 print(f"Assigned new port {assigned_port} for {TARGET_REPO}")
 
             # B. Outputs
-            # 1. Proxy Target
             base_proxy = full_data.get("proxy", "http://127.0.0.1/")
             clean_base = base_proxy.rstrip("/")
             proxy_target = f"{clean_base}:{assigned_port}/"
 
-            # 2. ECR Repo Name (Extract lowercase name from services map)
+            # ECR Repo Name (Extract lowercase name)
             repo_services = full_data.get("repos", {}).get(TARGET_REPO, {}).get("services", {})
             raw_ecr_name = repo_services.get("ECR", TARGET_REPO)
             ecr_repo_name = raw_ecr_name.lower()

@@ -30,7 +30,7 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ secrets.AWS_REGION_NAME }}
 
-      # 1. Login to ECR (To get the Registry URL)
+      # 1. Login to ECR
       - name: Login to Amazon ECR
         id: login_ecr
         uses: aws-actions/amazon-ecr-login@v2
@@ -43,7 +43,7 @@ jobs:
       - name: Install Dependencies
         run: pip install ansible boto3 botocore
 
-      # 2. Run Python Script (To get Proxy Target & Lowercase ECR Name)
+      # 2. Run Python Script (Get Proxy & Repo Name)
       - name: Determine Mapping & Port
         id: check_mapping
         run: python .github/workflows/secretsManager.py
@@ -58,13 +58,12 @@ jobs:
           echo "${{ secrets.VAULT_PASSWORD }}" > .vault_pass
           chmod 600 .vault_pass
 
-      # 3. Run Ansible (Constructing URI inline)
+      # 3. Run Ansible
       - name: Run Ansible Deployment Playbook
         working-directory: ansible/nginx/config
         env:
           ANSIBLE_HOST_KEY_CHECKING: "False"
         run: |
-          # Construct URI from Step 1 (Registry) and Step 2 (Repo Name)
           FULL_URI="${{ steps.login_ecr.outputs.registry }}/${{ steps.check_mapping.outputs.ecr_repo_name }}:latest"
 
           ansible-playbook project_mapping.yaml \
