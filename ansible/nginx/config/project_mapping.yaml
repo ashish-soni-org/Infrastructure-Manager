@@ -127,14 +127,14 @@
     # 4. NGINX MAPPING
     - name: Upload Mapping Script
       ansible.builtin.copy:
-        src: add_nginx_mapping.sh
-        dest: "{{ WORKDIR }}/add_nginx_mapping.sh"
+        src: project_config.sh
+        dest: "{{ WORKDIR }}/project_config.sh"
         mode: '0755'
       when: not is_mapped | bool
 
     - name: Inject Nginx Mapping
       ansible.builtin.shell: |
-        ./add_nginx_mapping.sh "{{ active_config_file }}" "{{ endpoint }}" "{{ proxy_target }}"
+        ./project_config.sh "{{ active_config_file }}" "{{ endpoint }}" "{{ proxy_target }}"
       args:
         chdir: "{{ WORKDIR }}"
       when: not is_mapped | bool
