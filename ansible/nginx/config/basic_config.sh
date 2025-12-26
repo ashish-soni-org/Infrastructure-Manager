@@ -51,16 +51,6 @@ server {
     # PROJECT MAPPINGS (Update this section as projects come)
     # ------------------------------------------------------
 
-    # [Project 1]: My-Website
-    # location / {
-    #     proxy_pass http://localhost:3000;
-    # }
-
-    # [Project 2]: Vehicle-Insurance-Eligibility-Prediction
-    # location /vehicle-insurance {
-    #     proxy_pass http://localhost:8001;
-    # }
-
     # [Default Fallback]
     location / {
         return 200 'Nginx is running. Configure Docker mappings in basic_config.sh.';

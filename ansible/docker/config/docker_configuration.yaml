@@ -13,22 +13,16 @@
     # -----------------------------------------------------------
     # 1. PERMISSION & CONNECTION FIXES
     # -----------------------------------------------------------
-    # Explicitly define the user to run scripts as
     ansible_user: ubuntu
-    
-    # Force use of /tmp for temporary files (Essential for AWS SSM connections)
     ansible_remote_tmp: /tmp/.ansible-${USER}/tmp
 
     # -----------------------------------------------------------
-    # 2. SCRIPT CONFIGURATION VARIABLES (Restored)
+    # 2. SCRIPT CONFIGURATION VARIABLES
     # -----------------------------------------------------------
-    WORKDIR: /home/ubuntu/docker_startup_creation_scripts
     LOG_FILE_NAME: startup.log
     STARTUP_FILE_NAME: startup.sh
     USERNAME: AWS
-    # NOTE: You must pass 'ECR', 'CONTAINERS', and 'MAPPED_PORTS' via -e in GitHub Actions
-    # OR define defaults here if they are static.
-    
+
   tasks:
     - name: Wait for connection
       ansible.builtin.wait_for_connection:
@@ -36,7 +30,7 @@
 
     - name: Create working directory
       ansible.builtin.file:
-        path: "{{ WORKDIR }}"
+        path: "{{ FILE_PATH }}"
         state: directory
         mode: '0755'
         owner: "{{ ansible_user }}"
@@ -45,7 +39,7 @@
     - name: Upload docker script file to server
       ansible.builtin.copy:
         src: startup_script.sh
-        dest: "{{ WORKDIR }}/startup_script.sh"
+        dest: "{{ FILE_PATH }}/startup_script.sh"
         mode: '0755'
         owner: "{{ ansible_user }}"
         group: "{{ ansible_user }}"
@@ -85,21 +79,17 @@
     # --- Generate Startup Script ---
     - name: Configure Docker for Repositories
       ansible.builtin.shell: 
-        # FIX: Explicitly use /bin/bash
+        # Explicitly use /bin/bash
         cmd: >
           /bin/bash ./startup_script.sh 
-          "{{ WORKDIR }}" 
+          "{{ FILE_PATH }}" 
           "{{ LOG_FILE_NAME }}" 
           "{{ STARTUP_FILE_NAME }}" 
           "{{ REGION }}" 
           "{{ USERNAME }}" 
-          "{{ ECR }}" 
-          "{{ CONTAINERS }}" 
-          "{{ MAPPED_PORTS }}"
+          "{{ ECR }}"
       args:
-        chdir: "{{ WORKDIR }}"
-      # Run as root (default become: true) to avoid directory permission issues.
-      # The 'become_user' line was removed because root access is safer for this operation.
+        chdir: "{{ FILE_PATH }}"
 
     - name: Enable and start startup service
       ansible.builtin.systemd:

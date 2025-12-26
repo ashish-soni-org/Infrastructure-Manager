@@ -10,9 +10,9 @@
     ansible_connection: "{{ ANSIBLE_CONNECTION }}"
     ansible_aws_ssm_bucket_name: "{{ ANSIBLE_AWS_SSM_BUCKET_NAME }}"
     ansible_aws_ssm_region: "{{ ANSIBLE_AWS_SSM_REGION }}"
-    WORKDIR: /home/ubuntu/nginx_config_creation_scripts
-    # UPDATED: Point to sites-available to edit actual files
     NGINX_AVAILABLE: /etc/nginx/sites-available
+    # NEW: Path to the startup script we want to update
+    STARTUP_SCRIPT: /home/ubuntu/docker_startup_creation_scripts/startup.sh
 
   tasks:
     - name: Wait for connection
@@ -65,7 +65,7 @@
       ansible.builtin.command: "/tmp/aws/install --update"
       when: aws_cli_check.rc != 0
 
-    # 2. IDENTIFY NGINX CONFIG FILE (Updated to check sites-available)
+    # 2. IDENTIFY NGINX CONFIG FILE
     - name: Check for default config
       ansible.builtin.stat:
         path: "{{ NGINX_AVAILABLE }}/default"
@@ -125,19 +125,25 @@
           - "{{ proxy_target | regex_search(':[0-9]+') | replace(':','') }}:80"
       when: image_uri is defined and image_uri | length > 0
 
-    # 4. NGINX MAPPING
+    # 4. NGINX & STARTUP MAPPING
     - name: Upload Mapping Script
       ansible.builtin.copy:
         src: project_config.sh
-        dest: "{{ WORKDIR }}/project_config.sh"
+        dest: "{{ FILE_PATH }}/project_config.sh"
         mode: '0755'
       when: not is_mapped | bool
 
-    - name: Inject Nginx Mapping
+    - name: Inject Nginx Mapping and Update Startup Script
       ansible.builtin.shell: |
-        ./project_config.sh "{{ active_config_file }}" "{{ endpoint }}" "{{ proxy_target }}"
+        ./project_config.sh \
+          "{{ active_config_file }}" \
+          "{{ endpoint }}" \
+          "{{ proxy_target }}" \
+          "{{ repo_name }}" \
+          "{{ image_uri }}" \
+          "{{ STARTUP_SCRIPT }}"
       args:
-        chdir: "{{ WORKDIR }}"
+        chdir: "{{ FILE_PATH }}"
       when: not is_mapped | bool
 
     - name: Check Nginx Syntax
