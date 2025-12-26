@@ -35,12 +35,6 @@ else
     REWRITE_RULE="^/$CLEAN_NAME/(.*)$ /\$1 break"
 fi
 
-# 2. Cleanup Existing Nginx Block (Idempotency)
-if grep -q "$SED_MATCH" "$CONFIG_FILE"; then
-    sed "/$SED_MATCH/,/}/d" "$CONFIG_FILE" > "$CONFIG_FILE.tmp"
-    mv "$CONFIG_FILE.tmp" "$CONFIG_FILE"
-fi
-
 # 3. Build Header String
 PROXY_SET_HEADERS=""
 SIZE=${#PROXY_HEADERS[@]}
