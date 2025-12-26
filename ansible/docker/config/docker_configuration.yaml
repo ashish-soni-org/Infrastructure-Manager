@@ -1,5 +1,6 @@
 - name: Creating Docker Startup Service
   hosts: all
+  gather_facts: true
   become: true
 
   vars_files:
