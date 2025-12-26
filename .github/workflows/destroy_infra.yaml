@@ -83,5 +83,5 @@ jobs:
         run: python secretsManager.py
         env:
           AWS_REGION: ${{ secrets.AWS_REGION_NAME }}
-          SECRET_FILE_NAME: ${{ secrets.AWS_SECRETS_MANAGER_NAME }}
+          SECRET_FILE_NAME: ${{ secrets.SECRET_FILE_NAME }}
           ACTION_TYPE: "DESTROY_INFRA"
