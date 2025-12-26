@@ -504,6 +504,6 @@ jobs:
             else
               echo "Successfully triggered $REPO"
               echo "Waiting 30 seconds before next trigger..."
-              sleep 30
+              sleep 90
             fi
           done
