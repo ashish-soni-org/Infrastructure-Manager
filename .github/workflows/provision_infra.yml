@@ -312,64 +312,64 @@ jobs:
   #       run: rm -f .vault_pass
   
   # NGINX CONFIGURATION
-  configure_nginx:
-    name: Configure NGINX VHosts
-    # needs: [resource_provision, install_nginx]
-    # Run whenever NGINX is installed, regardless of domain mapping
-    # if: needs.resource_provision.outputs.run_nginx == 'true'
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: ansible/nginx/config
-    steps:
-      - uses: actions/checkout@v4
+  # configure_nginx:
+  #   name: Configure NGINX VHosts
+  #   # needs: [resource_provision, install_nginx]
+  #   # Run whenever NGINX is installed, regardless of domain mapping
+  #   # if: needs.resource_provision.outputs.run_nginx == 'true'
+  #   runs-on: ubuntu-latest
+  #   defaults:
+  #     run:
+  #       working-directory: ansible/nginx/config
+  #   steps:
+  #     - uses: actions/checkout@v4
 
-      - uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ secrets.AWS_REGION_NAME }}
+  #     - uses: aws-actions/configure-aws-credentials@v4
+  #       with:
+  #         aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+  #         aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+  #         aws-region: ${{ secrets.AWS_REGION_NAME }}
 
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
+  #     - uses: actions/setup-python@v5
+  #       with:
+  #         python-version: "3.12"
 
-      - name: Install Dependencies
-        run: pip install ansible boto3 botocore
+  #     - name: Install Dependencies
+  #       run: pip install ansible boto3 botocore
 
-      - name: Create Vault Pass
-        run: |
-          echo "${{ secrets.VAULT_PASSWORD }}" > .vault_pass
-          chmod 600 .vault_pass
+  #     - name: Create Vault Pass
+  #       run: |
+  #         echo "${{ secrets.VAULT_PASSWORD }}" > .vault_pass
+  #         chmod 600 .vault_pass
 
-      - name: Run Ansible Playbook
-        env:
-          ANSIBLE_CONFIG: "../ansible.cfg"
-          ANSIBLE_HOST_KEY_CHECKING: "False"
-        run: |
-          # 1. Target ALL NGINX instances (from service_inventory), not just domain-mapped ones
-          IDS=$(echo '${{ needs.resource_provision.outputs.service_inventory }}' | jq -r '.NGINX')
+  #     - name: Run Ansible Playbook
+  #       env:
+  #         ANSIBLE_CONFIG: "../ansible.cfg"
+  #         ANSIBLE_HOST_KEY_CHECKING: "False"
+  #       run: |
+  #         # 1. Target ALL NGINX instances (from service_inventory), not just domain-mapped ones
+  #         IDS=$(echo '${{ needs.resource_provision.outputs.service_inventory }}' | jq -r '.NGINX')
           
-          # 2. Determine value for dns_instances variable
-          IS_MAP_DOMAIN="${{ needs.resource_provision.outputs.map_domain }}"
+  #         # 2. Determine value for dns_instances variable
+  #         IS_MAP_DOMAIN="${{ needs.resource_provision.outputs.map_domain }}"
           
-          if [ "$IS_MAP_DOMAIN" == "true" ]; then
-            # If domain is provided, pass the full domain inventory JSON
-            DNS_PAYLOAD=$(echo '${{ needs.resource_provision.outputs.map_domain_inventory }}' | jq -c '.')
-          else
-            # Else pass "false" as requested
-            DNS_PAYLOAD="false"
-          fi
+  #         if [ "$IS_MAP_DOMAIN" == "true" ]; then
+  #           # If domain is provided, pass the full domain inventory JSON
+  #           DNS_PAYLOAD=$(echo '${{ needs.resource_provision.outputs.map_domain_inventory }}' | jq -c '.')
+  #         else
+  #           # Else pass "false" as requested
+  #           DNS_PAYLOAD="false"
+  #         fi
           
-          # 3. Run Playbook
-          ansible-playbook \
-            -i "$IDS," \
-            nginx_configuration.yaml --vault-password-file .vault_pass \
-            -e "dns_instances=$DNS_PAYLOAD"
+  #         # 3. Run Playbook
+  #         ansible-playbook \
+  #           -i "$IDS," \
+  #           nginx_configuration.yaml --vault-password-file .vault_pass \
+  #           -e "dns_instances=$DNS_PAYLOAD"
 
-      - name: Cleanup
-        if: always()
-        run: rm -f .vault_pass
+  #     - name: Cleanup
+  #       if: always()
+  #       run: rm -f .vault_pass
   
   # # SSL CERTIFICATION
   # ssl_certified:
