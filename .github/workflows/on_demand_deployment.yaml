@@ -53,12 +53,31 @@ jobs:
           ACTION_TYPE: ${{ env.ACTION_TYPE }}
           REPO_NAME: ${{ env.REPO_NAME }}
 
+      # 3. Fetch ALL Running EC2 Instances (No Tag Filter)
+      - name: Fetch Target Instances
+        id: fetch_instances
+        run: |
+          # Query AWS for ANY instance in 'running' state
+          INSTANCE_IDS=$(aws ec2 describe-instances \
+            --filters "Name=instance-state-name,Values=running" \
+            --query "Reservations[*].Instances[*].InstanceId" \
+            --output text | tr '\t' ',')
+          
+          if [ -z "$INSTANCE_IDS" ]; then
+            echo "Error: No running instances found in region ${{ secrets.AWS_REGION_NAME }}."
+            exit 1
+          fi
+          
+          # Append trailing comma for Ansible inventory syntax consistency
+          echo "instance_ids=${INSTANCE_IDS}," >> $GITHUB_OUTPUT
+          echo "Found Targets: $INSTANCE_IDS"
+
       - name: Create Vault Password File
         run: |
           echo "${{ secrets.VAULT_PASSWORD }}" > .vault_pass
           chmod 600 .vault_pass
 
-      # 3. Run Ansible
+      # 4. Run Ansible with Dynamic Inventory
       - name: Run Ansible Deployment Playbook
         working-directory: ansible/nginx/config
         env:
@@ -67,7 +86,7 @@ jobs:
           FULL_URI="${{ steps.login_ecr.outputs.registry }}/${{ steps.check_mapping.outputs.ecr_repo_name }}:latest"
 
           ansible-playbook project_mapping.yaml \
-            -i "i-078ce0691ad4f093d," \
+            -i "${{ steps.fetch_instances.outputs.instance_ids }}" \
             --vault-password-file ../../../.vault_pass \
             -e "repo_name=${{ env.REPO_NAME }}" \
             -e "image_uri=$FULL_URI" \
