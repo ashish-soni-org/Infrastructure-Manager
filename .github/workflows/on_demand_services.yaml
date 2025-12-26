@@ -20,7 +20,7 @@ jobs:
 
   service_provision:
     name: Provisioning required services
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     defaults:
       run:
         working-directory: terraform
