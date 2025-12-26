@@ -92,7 +92,7 @@ echo "Starting $REPO_NAME..." >> \$LOG_FILE
 docker stop $REPO_NAME >> \$LOG_FILE 2>&1 || true
 docker rm $REPO_NAME >> \$LOG_FILE 2>&1 || true
 docker pull $IMAGE_URI >> \$LOG_FILE 2>&1
-docker run -d --name $REPO_NAME -p $HOST_PORT:80 $IMAGE_URI >> \$LOG_FILE 2>&1
+docker run -d --name $REPO_NAME -p $HOST_PORT:5000 $IMAGE_URI >> \$LOG_FILE 2>&1
 EOF
         
         # Insert the block immediately after the marker "# Execute Docker Operations"

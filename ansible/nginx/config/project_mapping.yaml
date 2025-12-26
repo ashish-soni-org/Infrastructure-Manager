@@ -122,7 +122,7 @@
         state: started
         restart_policy: always
         ports:
-          - "{{ proxy_target | regex_search(':[0-9]+') | replace(':','') }}:80"
+          - "{{ proxy_target | regex_search(':[0-9]+') | replace(':','') }}:5000"
       when: image_uri is defined and image_uri | length > 0
 
     # 4. NGINX & STARTUP MAPPING
