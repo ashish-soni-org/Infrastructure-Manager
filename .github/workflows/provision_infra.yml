@@ -372,51 +372,51 @@ jobs:
         run: rm -f .vault_pass
   
   # SSL CERTIFICATION
-  # ssl_certified:
-  #   name: Obtain SSL (Certbot)
-  #   needs: [resource_provision, configure_nginx, dns_mapping]
-  #   if: needs.resource_provision.outputs.map_domain == 'true'
-  #   runs-on: ubuntu-latest
-  #   defaults:
-  #     run:
-  #       working-directory: ansible/nginx/config
-  #   steps:
-  #     - uses: actions/checkout@v4
+  ssl_certified:
+    name: Obtain SSL (Certbot)
+    needs: [resource_provision, configure_nginx, dns_mapping]
+    if: needs.resource_provision.outputs.map_domain == 'true'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ansible/nginx/config
+    steps:
+      - uses: actions/checkout@v4
 
-  #     - uses: aws-actions/configure-aws-credentials@v4
-  #       with:
-  #         aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-  #         aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-  #         aws-region: ${{ secrets.AWS_REGION_NAME }}
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION_NAME }}
 
-  #     - uses: actions/setup-python@v5
-  #       with:
-  #         python-version: "3.12"
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
 
-  #     - name: Install Dependencies
-  #       run: pip install ansible boto3 botocore
+      - name: Install Dependencies
+        run: pip install ansible boto3 botocore
 
-  #     - name: Create Vault Pass
-  #       run: |
-  #         echo "${{ secrets.VAULT_PASSWORD }}" > .vault_pass
-  #         chmod 600 .vault_pass
+      - name: Create Vault Pass
+        run: |
+          echo "${{ secrets.VAULT_PASSWORD }}" > .vault_pass
+          chmod 600 .vault_pass
 
-  #     - name: Run Ansible Playbook
-  #       env:
-  #         ANSIBLE_CONFIG: "../ansible.cfg"
-  #         ANSIBLE_HOST_KEY_CHECKING: "False"
-  #       run: |
-  #         IDS=$(echo '${{ needs.resource_provision.outputs.map_domain_inventory }}' | jq -r '.[].instance_id' | paste -sd "," -)
-  #         DNS_PAYLOAD=$(echo '${{ needs.resource_provision.outputs.map_domain_inventory }}' | jq -c '.')
+      - name: Run Ansible Playbook
+        env:
+          ANSIBLE_CONFIG: "../ansible.cfg"
+          ANSIBLE_HOST_KEY_CHECKING: "False"
+        run: |
+          IDS=$(echo '${{ needs.resource_provision.outputs.map_domain_inventory }}' | jq -r '.[].instance_id' | paste -sd "," -)
+          DNS_PAYLOAD=$(echo '${{ needs.resource_provision.outputs.map_domain_inventory }}' | jq -c '.')
           
-  #         ansible-playbook \
-  #           -i "$IDS," \
-  #           ssl_certified.yaml --vault-password-file .vault_pass \
-  #           -e "dns_instances=$DNS_PAYLOAD"
+          ansible-playbook \
+            -i "$IDS," \
+            ssl_certified.yaml --vault-password-file .vault_pass \
+            -e "dns_instances=$DNS_PAYLOAD"
 
-  #     - name: Cleanup
-  #       if: always()
-  #       run: rm -f .vault_pass
+      - name: Cleanup
+        if: always()
+        run: rm -f .vault_pass
 
   # ----------------------------------------------------
   #             STARTUP SERVICES
