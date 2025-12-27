@@ -89,6 +89,10 @@ resource "aws_instance" "EC2" {
     aws_security_group.WEB_SG[each.value.vpc_name].id
   ]
 
+  root_block_device {
+    volume_size = 30
+  }
+
   tags = {
     Name     = each.value.name
     VPC      = each.value.vpc_name
