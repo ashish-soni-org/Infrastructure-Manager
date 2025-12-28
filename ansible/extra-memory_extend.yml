@@ -1,0 +1,72 @@
+---
+- name: Swap Space Configuration
+  hosts: all
+  gather_facts: true
+  become: true
+
+  vars_files:
+    - ../secrets/secrets.yml
+
+  vars:
+    ansible_connection: "{{ ANSIBLE_CONNECTION | default('aws_ssm') }}"
+    ansible_aws_ssm_bucket_name: "{{ ANSIBLE_AWS_SSM_BUCKET_NAME | default('') }}"
+    ansible_aws_ssm_region: "{{ ANSIBLE_AWS_SSM_REGION | default('') }}"
+    swap_file_path: "/swapfile"
+    swap_file_size_mb: "6144" 
+
+  tasks:
+    - name: Wait for connection
+      ansible.builtin.wait_for_connection:
+        timeout: 300
+        
+    - name: "Check if swap file already exists"
+      ansible.builtin.stat:
+        path: "{{ swap_file_path }}"
+      register: swap_file_check
+
+    - name: "Create swap file using dd (Prevents filesystem holes)"
+      ansible.builtin.command:
+        cmd: "dd if=/dev/zero of={{ swap_file_path }} bs=1M count={{ swap_file_size_mb }}"
+      when: not swap_file_check.stat.exists
+      changed_when: true
+
+    - name: "Set professional permissions (root only)"
+      ansible.builtin.file:
+        path: "{{ swap_file_path }}"
+        owner: root
+        group: root
+        mode: '0600'
+
+    - name: "Format the file as swap"
+      ansible.builtin.command:
+        cmd: "mkswap {{ swap_file_path }}"
+      when: not swap_file_check.stat.exists or (swap_file_check.stat.size < (swap_file_size_mb|int * 1024 * 1024))
+      changed_when: true
+
+    - name: "Verify if swap is currently active"
+      ansible.builtin.shell: "swapon --show"
+      register: swapon_output
+      changed_when: false
+
+    - name: "Enable the swap file"
+      ansible.builtin.command:
+        cmd: "swapon {{ swap_file_path }}"
+      when: swap_file_path not in swapon_output.stdout
+      changed_when: true
+
+    - name: "Add swap entry to fstab for persistence"
+      ansible.posix.mount:
+        path: none
+        src: "{{ swap_file_path }}"
+        fstype: swap
+        opts: sw
+        passno: "0"
+        dump: "0"
+        state: present
+
+    - name: "Optimise swappiness (Prevents aggressive swapping)"
+      ansible.posix.sysctl:
+        name: vm.swappiness
+        value: '10'
+        state: present
+        reload: true

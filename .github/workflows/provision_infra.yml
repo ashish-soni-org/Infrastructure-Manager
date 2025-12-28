@@ -10,7 +10,7 @@ permissions:
 
 env:
   OWNER: "ashish-soni-org"
-  TARGETED_REPOS: '["My-Website", "Sentiment-Analysis", "Vehicle-Insurance-Eligibility-Prediction"]'
+  TARGETED_REPOS: '["My-Website", Monitoring, "Sentiment-Analysis", "Vehicle-Insurance-Eligibility-Prediction"]'
 
 jobs:
 
@@ -110,11 +110,51 @@ jobs:
           echo "run_minikube=$MINIKUBE" >> $GITHUB_OUTPUT
 
   # ----------------------------------------------------
+  #             INCREASING RAM USING MEMORY
+  # ----------------------------------------------------
+
+  # RAM UPGRADE
+  increase_ram:
+    name: Upgrade RAM size
+    needs: resource_provision
+    if: success()
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ansible
+    steps:
+      - uses: actions/checkout@v4
+      
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION_NAME }}
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install Dependencies
+        run: pip install ansible boto3 botocore
+
+      - name: Run Ansible Playbook
+        env:
+          ANSIBLE_CONFIG: "../ansible.cfg"
+          ANSIBLE_HOST_KEY_CHECKING: "False"
+        run: |
+          IDS=$(echo '${{ needs.resource_provision.outputs.service_inventory }}' | jq -r '.NGINX')
+          
+          ansible-playbook \
+            -i "$IDS," \
+            extra-memory_extend.yaml --vault-password-file .vault_pass
+
+  # ----------------------------------------------------
   #             SELF HOSTED RUNNER
   # ----------------------------------------------------
   hosting_runner:
     name: Configure Self-Hosted Runners
-    needs: resource_provision
+    needs: [resource_provision, increase_ram]
     if: needs.resource_provision.outputs.attach_runner == 'true'
     runs-on: ubuntu-latest
     defaults:
@@ -173,7 +213,7 @@ jobs:
   # NGINX
   install_nginx:
     name: Install NGINX
-    needs: resource_provision
+    needs: [resource_provision, increase_ram]
     if: needs.resource_provision.outputs.run_nginx == 'true'
     runs-on: ubuntu-latest
     defaults:
@@ -218,7 +258,7 @@ jobs:
   # DOCKER
   install_docker:
     name: Install Docker
-    needs: resource_provision
+    needs: [resource_provision, increase_ram]
     if: needs.resource_provision.outputs.run_docker == 'true'
     runs-on: ubuntu-latest
     defaults:
