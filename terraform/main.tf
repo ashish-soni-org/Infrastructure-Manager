@@ -25,7 +25,7 @@ resource "aws_route_table" "RT" {
 resource "aws_route" "public_internet_access" {
   for_each               = local.vpcs
   route_table_id         = aws_route_table.RT[each.key].id
-  destination_cidr_block = "0.0.0.0/0"
+  destination_cidr_block = var.all_ips_cidr
   gateway_id             = aws_internet_gateway.IGW[each.key].id
 }
 
@@ -46,28 +46,28 @@ resource "aws_route_table_association" "RT_ASSOC" {
 resource "aws_security_group" "WEB_SG" {
   for_each    = local.vpcs
   name        = "web-access-${each.key}"
-  description = "Allow HTTP/HTTPS"
+  description = "Allow HTTP/HTTPS access"
   vpc_id      = aws_vpc.VPC[each.key].id
 
   ingress {
-    from_port   = 80
-    to_port     = 80
+    from_port   = var.http_port
+    to_port     = var.http_port
     protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
+    cidr_blocks = [var.all_ips_cidr]
   }
 
   ingress {
-    from_port   = 443
-    to_port     = 443
+    from_port   = var.https_port
+    to_port     = var.https_port
     protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
+    cidr_blocks = [var.all_ips_cidr]
   }
 
   egress {
     from_port   = 0
     to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
+    protocol    = var.any_protocol
+    cidr_blocks = [var.all_ips_cidr]
   }
 
   tags = { Name = "web-access-${each.key}" }
@@ -90,13 +90,14 @@ resource "aws_instance" "EC2" {
   ]
 
   root_block_device {
-    volume_size = 30
+    volume_size = var.root_volume_size
   }
 
   tags = {
-    Name     = each.value.name
-    VPC      = each.value.vpc_name
-    Services = join(",", each.value.services)
+    Name       = each.value.name
+    VPC        = each.value.vpc_name
+    Services   = join(",", each.value.services)
+    Monitoring = "true"
   }
 }
 
@@ -117,10 +118,10 @@ resource "random_id" "BUCKET_SUFFIX" {
 }
 
 resource "aws_s3_bucket" "S3_BUCKET" {
-  for_each = local.s3_buckets
-  bucket   = "${each.value.name}-${random_id.BUCKET_SUFFIX[each.key].hex}"
+  for_each      = local.s3_buckets
+  bucket        = "${each.value.name}-${random_id.BUCKET_SUFFIX[each.key].hex}"
   force_destroy = true 
-  tags     = { Name = each.value.name }
+  tags          = { Name = each.value.name }
 }
 
 resource "aws_ecr_repository" "ECR_REPO" {
