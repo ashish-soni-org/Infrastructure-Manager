@@ -138,6 +138,11 @@ jobs:
       - name: Install Dependencies
         run: pip install ansible boto3 botocore
 
+      - name: Generate Secrets
+        run: |
+          echo "${{ secrets.VAULT_PASSWORD }}" > .vault_pass
+          chmod 600 .vault_pass
+
       - name: Run Ansible Playbook
         env:
           ANSIBLE_CONFIG: "../ansible.cfg"
@@ -147,7 +152,11 @@ jobs:
           
           ansible-playbook \
             -i "$IDS," \
-            extra-memory_extend.yaml
+            extra-memory_extend.yaml --vault-password-file .vault_pass
+
+      - name: Cleanup
+        if: always()
+        run: rm -f .vault_pass
 
   # ----------------------------------------------------
   #             SELF HOSTED RUNNER
