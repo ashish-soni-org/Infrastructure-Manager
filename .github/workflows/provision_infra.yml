@@ -1,38 +1,19 @@
-name: Infrastructure Provisioning and Configuring
+name: Deploy Monitoring Stack
 
 on:
-  repository_dispatch:
-    types: [event-provision-infra]
+  push:
+    branches: ["main"]
+  workflow_dispatch:
 
-permissions:
-  id-token: write
-  contents: read
-
-env:
-  OWNER: "ashish-soni-org"
-  TARGETED_REPOS: '["My-Website", "Monitoring", "Sentiment-Analysis", "Vehicle-Insurance-Eligibility-Prediction"]'
+concurrency:
+  group: monitoring-production
+  cancel-in-progress: true
 
 jobs:
-
-  # ----------------------------------------------------
-  #             RESOURCE PROVISION
-  # ----------------------------------------------------
-  resource_provision:
-    name: Provisioning Infrastructure (Terraform)
+  deploy:
+    name: Deploy via SSM
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: terraform
-
-    outputs:
-      attach_runner: ${{ steps.service_check.outputs.attach_runner }}
-      run_nginx: ${{ steps.service_check.outputs.run_nginx }}
-      map_domain: ${{ steps.service_check.outputs.map_domain }}
-      run_docker: ${{ steps.service_check.outputs.run_docker }}
-      run_minikube: ${{ steps.service_check.outputs.run_minikube }}
-      service_inventory: ${{ steps.tf_outputs.outputs.service_inventory }}
-      map_domain_inventory: ${{ steps.tf_outputs.outputs.map_domain_inventory }}
-
+    
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
@@ -44,515 +25,88 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ secrets.AWS_REGION_NAME }}
 
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v3
-        with:
-          terraform_version: 1.14.2
-
-      - name: Process Manifest & State
-        id: process_manifest
+      - name: Resolve Instance ID
+        id: get-instance
         run: |
-          set -e
+          # We use the Public IP to find the specific Instance ID for SSM
+          INSTANCE_ID=$(aws ec2 describe-instances \
+            --filters "Name=ip-address,Values=${{ secrets.MONITORING_HOST }}" \
+            --query "Reservations[*].Instances[*].InstanceId" \
+            --output text)
           
-          # 1. Backup existing manifest (Optional / Audit purpose)
-          if aws s3 ls "s3://${{ secrets.AWS_TF_STATE_FILE_BUCKET }}/${{ secrets.AWS_TF_STATE_MANIFEST_FILE_PATH }}" > /dev/null 2>&1; then
-            aws s3 cp "s3://${{ secrets.AWS_TF_STATE_FILE_BUCKET }}/${{ secrets.AWS_TF_STATE_MANIFEST_FILE_PATH }}" backup_previous_state.json
-          fi
-
-          # 2. Process incoming manifest payload
-          # The UI sends the FULL state. We treat this as the source of truth (Replace, don't Merge).
-          echo '${{ toJson(github.event.client_payload.manifest) }}' > current_state.json
-
-          # 3. Update Remote State
-          aws s3 cp current_state.json "s3://${{ secrets.AWS_TF_STATE_FILE_BUCKET }}/${{ secrets.AWS_TF_STATE_MANIFEST_FILE_PATH }}"
-
-          # 4. Generate Terraform Variables
-          # Pass the JSON object directly to the variable
-          echo "{\"ui_manifest\": $(cat current_state.json)}" > terraform.tfvars.json
-
-      - name: Terraform Init
-        run: |
-          terraform init \
-            -backend-config="bucket=${{ secrets.AWS_TF_STATE_FILE_BUCKET }}" \
-            -backend-config="key=${{ secrets.AWS_TF_STATE_FILE_PATH }}" \
-            -backend-config="region=${{ secrets.AWS_REGION_NAME }}" \
-            -backend-config="encrypt=true"
-
-      - name: Terraform Apply
-        run: terraform apply -auto-approve
-
-      - name: Export Terraform Outputs
-        id: tf_outputs
-        run: |
-          # Capture JSON outputs tightly
-          SERVICE_INVENTORY=$(terraform output -json service_inventory | jq -c .)
-          MAP_DOMAIN_INVENTORY=$(terraform output -json map_domain_inventory | jq -c .)
-
-          echo "service_inventory=$SERVICE_INVENTORY" >> $GITHUB_OUTPUT
-          echo "map_domain_inventory=$MAP_DOMAIN_INVENTORY" >> $GITHUB_OUTPUT
-
-      - name: Analyze Required Services
-        id: service_check
-        run: |
-          # Parse the manifest via tfvars to determine subsequent workflows.
-          # NOTE: Structure is now .ui_manifest.vpcs[].subnets...
-          
-          ATTACH_RUNNER=$(jq '[.ui_manifest.vpcs[].subnets[].resources[] | select(.type=="EC2").instances[].services[] | select(. == "Self-Hosted-Runner")] | length > 0' terraform.tfvars.json)
-          NGINX=$(jq '[.ui_manifest.vpcs[].subnets[].resources[] | select(.type=="EC2").instances[].services[] | select(. == "NGINX")] | length > 0' terraform.tfvars.json)
-          MAP_DOMAIN=$(jq '[.ui_manifest.vpcs[].subnets[].resources[] | select(.type=="EC2").instances[].services[] | select(. == "Map Domain")] | length > 0' terraform.tfvars.json)
-          DOCKER=$(jq '[.ui_manifest.vpcs[].subnets[].resources[] | select(.type=="EC2").instances[].services[] | select(. == "Docker")] | length > 0' terraform.tfvars.json)
-          MINIKUBE=$(jq '[.ui_manifest.vpcs[].subnets[].resources[] | select(.type=="EC2").instances[].services[] | select(. == "MiniKube")] | length > 0' terraform.tfvars.json)
-          
-          echo "attach_runner=$ATTACH_RUNNER" >> $GITHUB_OUTPUT
-          echo "run_nginx=$NGINX" >> $GITHUB_OUTPUT
-          echo "map_domain=$MAP_DOMAIN" >> $GITHUB_OUTPUT
-          echo "run_docker=$DOCKER" >> $GITHUB_OUTPUT
-          echo "run_minikube=$MINIKUBE" >> $GITHUB_OUTPUT
-
-  # ----------------------------------------------------
-  #             INCREASING RAM USING MEMORY
-  # ----------------------------------------------------
-
-  # RAM UPGRADE
-  increase_ram:
-    name: Upgrade RAM size
-    needs: resource_provision
-    if: success()
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: ansible
-    steps:
-      - uses: actions/checkout@v4
-      
-      - uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ secrets.AWS_REGION_NAME }}
-
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-
-      - name: Install Dependencies
-        run: pip install ansible boto3 botocore
-
-      - name: Generate Secrets
-        run: |
-          echo "${{ secrets.VAULT_PASSWORD }}" > .vault_pass
-          chmod 600 .vault_pass
-
-      - name: Run Ansible Playbook
-        env:
-          ANSIBLE_CONFIG: "../ansible.cfg"
-          ANSIBLE_HOST_KEY_CHECKING: "False"
-        run: |
-          IDS=$(echo '${{ needs.resource_provision.outputs.service_inventory }}' | jq -r '.NGINX')
-          
-          ansible-playbook \
-            -i "$IDS," \
-            extra-memory_extend.yaml --vault-password-file .vault_pass
-
-      - name: Cleanup
-        if: always()
-        run: rm -f .vault_pass
-
-  # ----------------------------------------------------
-  #             SELF HOSTED RUNNER
-  # ----------------------------------------------------
-  hosting_runner:
-    name: Configure Self-Hosted Runners
-    needs: [resource_provision, increase_ram]
-    if: needs.resource_provision.outputs.attach_runner == 'true'
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: ansible/self-hosted-runner
-    steps:
-      - uses: actions/checkout@v4  
-      
-      - uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ secrets.AWS_REGION_NAME }}
-
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-
-      - name: Install Dependencies
-        run: pip install ansible boto3 botocore
-
-      - name: Generate Secrets
-        run: |
-          echo "${{ secrets.VAULT_PASSWORD }}" > .vault_pass
-          chmod 600 .vault_pass
-
-      - name: Generate GitHub App Token
-        id: app_token
-        uses: actions/create-github-app-token@v1
-        with:
-          app-id: ${{ secrets.GH_APP_ID }}
-          private-key: ${{ secrets.GH_APP_PRIVATE_KEY }}
-          
-      - name: Run Ansible Playbook
-        id: ansible_step
-        env:
-          ANSIBLE_CONFIG: "../ansible.cfg"
-          ANSIBLE_HOST_KEY_CHECKING: "False"
-        run: |
-          IDS=$(echo '${{ needs.resource_provision.outputs.service_inventory }}' | jq -r '."Self-Hosted-Runner"')          
-          
-          ansible-playbook \
-            -i "$IDS," \
-            runner.yaml --vault-password-file .vault_pass \
-            -e "GITHUB_TOKEN=${{ steps.app_token.outputs.token }}" \
-            -e "REPO_URL=${{ github.server_url }}/${{ github.repository }}"
-
-      - name: Cleanup
-        if: always()
-        run: rm -f .vault_pass
-
-  # ----------------------------------------------------
-  #             PACKAGE INSTALLATION
-  # ----------------------------------------------------
-
-  # NGINX
-  install_nginx:
-    name: Install NGINX
-    needs: [resource_provision, increase_ram]
-    if: needs.resource_provision.outputs.run_nginx == 'true'
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: ansible/nginx
-    steps:
-      - uses: actions/checkout@v4
-      
-      - uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ secrets.AWS_REGION_NAME }}
-
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-
-      - name: Install Dependencies
-        run: pip install ansible boto3 botocore
-
-      - name: Create Vault Pass
-        run: |
-          echo "${{ secrets.VAULT_PASSWORD }}" > .vault_pass
-          chmod 600 .vault_pass
-
-      - name: Run Ansible Playbook
-        env:
-          ANSIBLE_CONFIG: "../ansible.cfg"
-          ANSIBLE_HOST_KEY_CHECKING: "False"
-        run: |
-          IDS=$(echo '${{ needs.resource_provision.outputs.service_inventory }}' | jq -r '.NGINX')
-          
-          ansible-playbook \
-            -i "$IDS," \
-            nginx.yaml --vault-password-file .vault_pass
-
-      - name: Cleanup
-        if: always()
-        run: rm -f .vault_pass
-  
-  # DOCKER
-  install_docker:
-    name: Install Docker
-    needs: [resource_provision, increase_ram]
-    if: needs.resource_provision.outputs.run_docker == 'true'
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: ansible/docker
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ secrets.AWS_REGION_NAME }}
-
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-
-      - name: Install Dependencies
-        run: pip install ansible boto3 botocore
-
-      - name: Create Vault Pass
-        run: |
-          echo "${{ secrets.VAULT_PASSWORD }}" > .vault_pass
-          chmod 600 .vault_pass
-
-      - name: Run Ansible Playbook
-        env:
-          ANSIBLE_CONFIG: "../ansible.cfg"
-          ANSIBLE_HOST_KEY_CHECKING: "False"
-        run: |
-          IDS=$(echo '${{ needs.resource_provision.outputs.service_inventory }}' | jq -r '.Docker')
-          
-          ansible-playbook \
-            -i "$IDS," \
-            docker.yaml --vault-password-file .vault_pass
-
-      - name: Cleanup
-        if: always()
-        run: rm -f .vault_pass
-
-  # ----------------------------------------------------
-  #             DOMAIN MAPPING
-  # ----------------------------------------------------
-  
-  # DNS MAPPING
-  dns_mapping:
-    name: Configure DNS Records
-    needs: [resource_provision]
-    if: needs.resource_provision.outputs.map_domain == 'true'
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: ansible/nginx/config
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ secrets.AWS_REGION_NAME }}
-
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-
-      - name: Install Dependencies
-        run: pip install ansible boto3 botocore
-
-      - name: Create Vault Pass
-        run: |
-          echo "${{ secrets.VAULT_PASSWORD }}" > .vault_pass
-          chmod 600 .vault_pass
-
-      - name: Run Ansible Playbook
-        env:
-          ANSIBLE_CONFIG: "../ansible.cfg"
-          ANSIBLE_HOST_KEY_CHECKING: "False"
-        run: |
-          IDS=$(echo '${{ needs.resource_provision.outputs.map_domain_inventory }}' | jq -r '.[].instance_id' | paste -sd "," -)
-          DNS_PAYLOAD=$(echo '${{ needs.resource_provision.outputs.map_domain_inventory }}' | jq -c '.')
-
-          ansible-playbook \
-            -i "$IDS," \
-            dns_mapping.yaml --vault-password-file .vault_pass \
-            -e "dns_instances=$DNS_PAYLOAD"
-
-      - name: Cleanup
-        if: always()
-        run: rm -f .vault_pass
-  
-  # NGINX CONFIGURATION
-  configure_nginx:
-    name: Configure NGINX VHosts
-    needs: [resource_provision, install_nginx]
-    # Run whenever NGINX is installed, regardless of domain mapping
-    # if: needs.resource_provision.outputs.run_nginx == 'true'
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: ansible/nginx/config
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ secrets.AWS_REGION_NAME }}
-
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-
-      - name: Install Dependencies
-        run: pip install ansible boto3 botocore
-
-      - name: Create Vault Pass
-        run: |
-          echo "${{ secrets.VAULT_PASSWORD }}" > .vault_pass
-          chmod 600 .vault_pass
-
-      - name: Run Ansible Playbook
-        env:
-          ANSIBLE_CONFIG: "../ansible.cfg"
-          ANSIBLE_HOST_KEY_CHECKING: "False"
-        run: |
-          # 1. Target ALL NGINX instances (from service_inventory), not just domain-mapped ones
-          IDS=$(echo '${{ needs.resource_provision.outputs.service_inventory }}' | jq -r '.NGINX')
-          
-          # 2. Determine value for dns_instances variable
-          IS_MAP_DOMAIN="${{ needs.resource_provision.outputs.map_domain }}"
-          
-          if [ "$IS_MAP_DOMAIN" == "true" ]; then
-            # If domain is provided, pass the full domain inventory JSON
-            DNS_PAYLOAD=$(echo '${{ needs.resource_provision.outputs.map_domain_inventory }}' | jq -c '.')
-          else
-            # Else pass "false" as requested
-            DNS_PAYLOAD="false"
+          if [ -z "$INSTANCE_ID" ]; then
+            echo "Error: Could not find Instance ID for IP ${{ secrets.MONITORING_HOST }}"
+            exit 1
           fi
           
-          # 3. Run Playbook
-          ansible-playbook \
-            -i "$IDS," \
-            nginx_configuration.yaml --vault-password-file .vault_pass \
-            -e "dns_instances=$DNS_PAYLOAD"
+          echo "Target Instance ID: $INSTANCE_ID"
+          echo "instance_id=$INSTANCE_ID" >> $GITHUB_OUTPUT
 
-      - name: Cleanup
-        if: always()
-        run: rm -f .vault_pass
-  
-  # SSL CERTIFICATION
-  ssl_certified:
-    name: Obtain SSL (Certbot)
-    needs: [resource_provision, configure_nginx, dns_mapping]
-    if: needs.resource_provision.outputs.map_domain == 'true'
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: ansible/nginx/config
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ secrets.AWS_REGION_NAME }}
-
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-
-      - name: Install Dependencies
-        run: pip install ansible boto3 botocore
-
-      - name: Create Vault Pass
+      - name: Deploy and Start Stack (SSM)
         run: |
-          echo "${{ secrets.VAULT_PASSWORD }}" > .vault_pass
-          chmod 600 .vault_pass
+          # 1. Prepare Files (Base64 Encode to prevent shell escaping issues)
+          COMPOSE_B64=$(base64 -w 0 docker-compose.yml)
+          NGINX_B64=$(base64 -w 0 nginx.conf)
+          PROMETHEUS_B64=$(base64 -w 0 prometheus.yml)
 
-      - name: Run Ansible Playbook
-        env:
-          ANSIBLE_CONFIG: "../ansible.cfg"
-          ANSIBLE_HOST_KEY_CHECKING: "False"
-        run: |
-          IDS=$(echo '${{ needs.resource_provision.outputs.map_domain_inventory }}' | jq -r '.[].instance_id' | paste -sd "," -)
-          DNS_PAYLOAD=$(echo '${{ needs.resource_provision.outputs.map_domain_inventory }}' | jq -c '.')
+          # 2. Construct the Remote Script
+          # This script runs ON the EC2 instance.
+          # We use a safe 'write_file' function to decode the content.
+          read -r -d '' REMOTE_SCRIPT <<EOF
+          cd /home/ubuntu
+          mkdir -p monitoring
+          cd monitoring
           
-          ansible-playbook \
-            -i "$IDS," \
-            ssl_certified.yaml --vault-password-file .vault_pass \
-            -e "dns_instances=$DNS_PAYLOAD"
+          echo "Deploying with Docker Version:"
+          docker --version
 
-      - name: Cleanup
-        if: always()
-        run: rm -f .vault_pass
+          # Write Config Files
+          echo "$COMPOSE_B64" | base64 -d > docker-compose.yml
+          echo "$NGINX_B64" | base64 -d > nginx.conf
+          echo "$PROMETHEUS_B64" | base64 -d > prometheus.yml
 
-  # ----------------------------------------------------
-  #             STARTUP SERVICES
-  # ----------------------------------------------------
-  
-  # DOCKER CONFIGURATION
-  startup_service_docker:
-    name: Configure Docker Containers
-    needs: [resource_provision, install_docker]
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: ansible/docker/config
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ secrets.AWS_REGION_NAME }}
-
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-
-      - name: Install Dependencies
-        run: pip install ansible boto3 botocore
-
-      - name: Create Vault Pass
-        run: |
-          echo "${{ secrets.VAULT_PASSWORD }}" > .vault_pass
-          chmod 600 .vault_pass
-
-      - name: Run Ansible Playbook
-        env:
-          ANSIBLE_CONFIG: "../../ansible.cfg"
-          ANSIBLE_HOST_KEY_CHECKING: "False"
-        run: |
-          IDS=$(echo '${{ needs.resource_provision.outputs.service_inventory }}' | jq -r '."Self-Hosted-Runner"')   
+          # Restart Stack
+          docker compose pull
+          docker compose up -d --remove-orphans
+          docker system prune -f
           
-          ansible-playbook \
-            -i "$IDS," \
-            docker_configuration.yaml \
-            --vault-password-file .vault_pass
+          echo "Deployment Complete. Running containers:"
+          docker compose ps
+          EOF
 
-      - name: Cleanup
-        if: always()
-        run: rm -f .vault_pass
+          # 3. Send Command via SSM
+          # We wrap the script in a JSON array for the AWS CLI
+          COMMAND_ID=$(aws ssm send-command \
+            --document-name "AWS-RunShellScript" \
+            --targets "Key=InstanceIds,Values=${{ steps.get-instance.outputs.instance_id }}" \
+            --parameters commands="[\"$(echo $REMOTE_SCRIPT | sed 's/"/\\"/g')\"]" \
+            --query "Command.CommandId" \
+            --output text)
 
-  # ----------------------------------------------------
-  #             PING -  BUILD PROJECTS
-  # ----------------------------------------------------
-            
-  deploy_website_and_projects:
-    name: Trigger Repository Builds
-    needs: [hosting_runner, configure_nginx, startup_service_docker]
-    if: success() 
-    runs-on: ubuntu-latest
-    steps:
-      - name: Generate GitHub App Token
-        id: app-token
-        uses: actions/create-github-app-token@v1
-        with:
-          app-id: ${{ secrets.GH_APP_ID }}
-          private-key: ${{ secrets.GH_APP_PRIVATE_KEY }}
-          owner: ${{ env.OWNER }}
-          repositories: ${{ join(fromJSON(env.TARGETED_REPOS), ',') }}
+          echo "Command sent: $COMMAND_ID"
 
-      - name: Trigger Repositories
-        run: |
-          echo '${{ env.TARGETED_REPOS }}' | jq -r '.[]' | while read REPO; do
-            echo "Triggering build for: $REPO"
+          # 4. Wait for Completion
+          # Poll the status until it finishes
+          while true; do
+            STATUS=$(aws ssm list-command-invocations \
+              --command-id "$COMMAND_ID" \
+              --details \
+              --query "CommandInvocations[0].Status" \
+              --output text)
             
-            HTTP_RESPONSE=$(curl -X POST -s -o response.txt -w "%{http_code}" \
-              -H "Authorization: Bearer ${{ steps.app-token.outputs.token }}" \
-              -H "Accept: application/vnd.github.v3+json" \
-              "https://api.github.com/repos/${{ env.OWNER }}/$REPO/dispatches" \
-              -d '{"event_type":"event-on-demand-build","client_payload":{"from":"provision-infra-pipeline"}}')
+            echo "Status: $STATUS"
             
-            if [ "$HTTP_RESPONSE" != "204" ]; then
-              echo "Failed to trigger $REPO. HTTP Status: $HTTP_RESPONSE"
-              cat response.txt
+            if [ "$STATUS" == "Success" ]; then
+              echo "Deployment Successful!"
+              break
+            elif [ "$STATUS" == "Failed" ]; then
+              echo "Deployment Failed. Fetching output..."
+              aws ssm list-command-invocations \
+                --command-id "$COMMAND_ID" \
+                --details \
+                --query "CommandInvocations[0].CommandPlugins[0].Output" \
+                --output text
               exit 1
-            else
-              echo "Successfully triggered $REPO"
-              echo "Waiting 120 seconds before next trigger..."
-              sleep 120
             fi
+            sleep 5
           done
