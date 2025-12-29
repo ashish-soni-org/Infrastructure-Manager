@@ -147,7 +147,7 @@ jobs:
           
           ansible-playbook \
             -i "$IDS," \
-            extra-memory_extend.yaml --vault-password-file .vault_pass
+            extra-memory_extend.yaml
 
   # ----------------------------------------------------
   #             SELF HOSTED RUNNER
