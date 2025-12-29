@@ -15,7 +15,7 @@ jobs:
     name: Destroy Infrastructure (Terraform)
     runs-on: ubuntu-latest
     defaults:
-      run:
+      run: 
         working-directory: terraform
 
     steps:
