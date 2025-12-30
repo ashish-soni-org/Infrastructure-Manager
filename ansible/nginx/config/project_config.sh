@@ -8,26 +8,37 @@ REPO_NAME=$4     # For Docker Container Name
 IMAGE_URI=$5     # For Docker Image
 STARTUP_SCRIPT=$6 # Path to startup.sh
 
-# Extract Port from Proxy Target
-HOST_PORT=$(echo "$PROXY_TARGET" | sed -e 's/.*:\([0-9]*\)\/.*/\1/')
+# 1. Extract Port from Proxy Target 
+# Handles both http://ip:port/ and http://ip:port formats
+HOST_PORT=$(echo "$PROXY_TARGET" | sed -e 's/.*:\([0-9]*\).*/\1/' | cut -d'/' -f1)
 
 # Standard Headers
 PROXY_HEADERS=(
     "Host \$host"
     "X-Real-IP \$remote_addr"
+    "X-Forwarded-For \$proxy_add_x_forwarded_for"
+    "X-Forwarded-Proto \$scheme"
 )
 
 # ==================================================================
 # PART 1: NGINX CONFIGURATION (WITH IDEMPOTENCY)
 # ==================================================================
 
+# Define the anchor marker for injection
+MARKER="# PROJECT MAPPINGS (Update this section as projects come)"
+
+if ! grep -qF "$MARKER" "$CONFIG_FILE"; then
+    echo "Error: Marker not found in $CONFIG_FILE"
+    echo "Please ensure the file contains: $MARKER"
+    exit 1
+fi
+
 # 1. Determine Mapping Type and Cleanup Target
 if [ "$ENDPOINT" == "/" ]; then
     COMMENT="# MAIN APP"
     LOCATION_PATH="/"
     REWRITE_RULE="" 
-    # This matches the placeholder in your basic_config.sh OR an existing root block
-    DELETE_MATCH="\[Default Fallback\]|location \/ {"
+    DELETE_MATCH="location \/ {"
 else
     CLEAN_NAME=$(echo "$ENDPOINT" | sed 's/^\///;s/\/$//')
     COMMENT="# PROJECT $CLEAN_NAME"
@@ -37,7 +48,7 @@ else
 fi
 
 # 2. CRITICAL: Remove existing block before adding new one
-# This prevents the "duplicate location" error and 502s
+# This ensures that re-running the script updates the configuration instead of duplicating it
 if grep -qE "$DELETE_MATCH" "$CONFIG_FILE"; then
     echo "Cleaning up existing Nginx block for $ENDPOINT..."
     # Deletes from the match line until the first closing brace '}'
@@ -67,15 +78,15 @@ NEW_MAPPING_BLOCK+="
 $PROXY_SET_HEADERS
     }"
 
-# 5. Inject into Nginx File (inside the server block)
-# Remove the last line (the closing '}')
-head -n -1 "$CONFIG_FILE" > "$CONFIG_FILE.tmp"
-# Append new block
-echo "$NEW_MAPPING_BLOCK" >> "$CONFIG_FILE.tmp"
-# Restore the closing '}'
-echo "}" >> "$CONFIG_FILE.tmp"
-mv "$CONFIG_FILE.tmp" "$CONFIG_FILE"
+# 5. Inject into Nginx File (Targeted Injection)
+# We create a temporary file for the block to handle multi-line insertion cleanly via sed
+echo "$NEW_MAPPING_BLOCK" > mapping_block.tmp
 
+# This sed command finds the marker and appends the content of mapping_block.tmp 
+# two lines below it (after the decorative dashed line)
+sed -i "/$MARKER/{n;r mapping_block.tmp" -e "}" "$CONFIG_FILE"
+
+rm mapping_block.tmp
 echo "Success: Nginx mapping updated for $ENDPOINT"
 
 # ==================================================================
@@ -85,7 +96,9 @@ echo "Success: Nginx mapping updated for $ENDPOINT"
 if [ -f "$STARTUP_SCRIPT" ]; then
     # Check if this container is already in the startup script
     if grep -q "name $REPO_NAME " "$STARTUP_SCRIPT"; then
-        echo "Startup Script: $REPO_NAME already exists. Skipping."
+        echo "Startup Script: $REPO_NAME already exists. Updating image URI..."
+        # Update the image URI if the container already exists (optional but professional)
+        sed -i "s|docker run .* --name $REPO_NAME .*|docker run -d --name $REPO_NAME -p $HOST_PORT:5000 $IMAGE_URI >> \$LOG_FILE 2>&1|g" "$STARTUP_SCRIPT"
     else
         echo "Startup Script: Adding persistence for $REPO_NAME..."
         
@@ -100,7 +113,11 @@ docker run -d --name $REPO_NAME -p $HOST_PORT:5000 $IMAGE_URI >> \$LOG_FILE 2>&1
 EOF
         
         # Insert after the marker
-        sed -i "/# Execute Docker Operations/r docker_block.tmp" "$STARTUP_SCRIPT"
+        if grep -q "# Execute Docker Operations" "$STARTUP_SCRIPT"; then
+            sed -i "/# Execute Docker Operations/r docker_block.tmp" "$STARTUP_SCRIPT"
+        else
+            cat docker_block.tmp >> "$STARTUP_SCRIPT"
+        fi
         rm docker_block.tmp
         echo "Success: Added $REPO_NAME to startup.sh"
     fi
