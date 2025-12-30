@@ -63,7 +63,7 @@ $PROXY_SET_HEADERS
 # 4. Inject into Nginx File at Line 8
 # We use a temporary file to hold the new block and insert it at line 8
 echo "$NEW_MAPPING_BLOCK" > nginx_block.tmp
-sed -i "8r nginx_block.tmp" "$CONFIG_FILE"
+sed -i "20r nginx_block.tmp" "$CONFIG_FILE"
 rm nginx_block.tmp
 
 echo "Success: Nginx mapping updated for $ENDPOINT at line 8"
