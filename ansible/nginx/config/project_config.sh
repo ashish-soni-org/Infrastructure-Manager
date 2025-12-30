@@ -8,37 +8,25 @@ REPO_NAME=$4     # For Docker Container Name
 IMAGE_URI=$5     # For Docker Image
 STARTUP_SCRIPT=$6 # Path to startup.sh
 
-# 1. Extract Port from Proxy Target 
-# Handles both http://ip:port/ and http://ip:port formats
-HOST_PORT=$(echo "$PROXY_TARGET" | sed -e 's/.*:\([0-9]*\).*/\1/' | cut -d'/' -f1)
+# Extract Port from Proxy Target
+HOST_PORT=$(echo "$PROXY_TARGET" | sed -e 's/.*:\([0-9]*\)\/.*/\1/')
 
 # Standard Headers
 PROXY_HEADERS=(
     "Host \$host"
     "X-Real-IP \$remote_addr"
-    "X-Forwarded-For \$proxy_add_x_forwarded_for"
-    "X-Forwarded-Proto \$scheme"
 )
 
 # ==================================================================
 # PART 1: NGINX CONFIGURATION (WITH IDEMPOTENCY)
 # ==================================================================
 
-# Define the anchor marker for injection
-MARKER="# PROJECT MAPPINGS (Update this section as projects come)"
-
-if ! grep -qF "$MARKER" "$CONFIG_FILE"; then
-    echo "Error: Marker not found in $CONFIG_FILE"
-    echo "Please ensure the file contains: $MARKER"
-    exit 1
-fi
-
 # 1. Determine Mapping Type and Cleanup Target
 if [ "$ENDPOINT" == "/" ]; then
     COMMENT="# MAIN APP"
     LOCATION_PATH="/"
     REWRITE_RULE="" 
-    DELETE_MATCH="location \/ {"
+    DELETE_MATCH="\[Default Fallback\]|location \/ {"
 else
     CLEAN_NAME=$(echo "$ENDPOINT" | sed 's/^\///;s/\/$//')
     COMMENT="# PROJECT $CLEAN_NAME"
@@ -47,15 +35,7 @@ else
     DELETE_MATCH="location \^~ \/$CLEAN_NAME\/ {"
 fi
 
-# 2. CRITICAL: Remove existing block before adding new one
-# This ensures that re-running the script updates the configuration instead of duplicating it
-if grep -qE "$DELETE_MATCH" "$CONFIG_FILE"; then
-    echo "Cleaning up existing Nginx block for $ENDPOINT..."
-    # Deletes from the match line until the first closing brace '}'
-    sed -i "/$DELETE_MATCH/,/}/d" "$CONFIG_FILE"
-fi
-
-# 3. Build Header String
+# 2. Build Header String
 PROXY_SET_HEADERS=""
 SIZE=${#PROXY_HEADERS[@]}
 for i in "${!PROXY_HEADERS[@]}"; do
@@ -65,7 +45,7 @@ for i in "${!PROXY_HEADERS[@]}"; do
     if [[ $i -lt $((SIZE - 1)) ]]; then PROXY_SET_HEADERS+=$'\n'; fi
 done
 
-# 4. Construct Nginx Block
+# 3. Construct Nginx Block
 NEW_MAPPING_BLOCK="
     $COMMENT
     location $LOCATION_PATH {"
@@ -76,18 +56,17 @@ fi
 NEW_MAPPING_BLOCK+="
         proxy_pass $PROXY_TARGET;
 $PROXY_SET_HEADERS
-    }"
+    }
+    
+"
 
-# 5. Inject into Nginx File (Targeted Injection)
-# We create a temporary file for the block to handle multi-line insertion cleanly via sed
-echo "$NEW_MAPPING_BLOCK" > mapping_block.tmp
+# 4. Inject into Nginx File at Line 8
+# We use a temporary file to hold the new block and insert it at line 8
+echo "$NEW_MAPPING_BLOCK" > nginx_block.tmp
+sed -i "8r nginx_block.tmp" "$CONFIG_FILE"
+rm nginx_block.tmp
 
-# This sed command finds the marker and appends the content of mapping_block.tmp 
-# two lines below it (after the decorative dashed line)
-sed -i "/$MARKER/{n;r mapping_block.tmp" -e "}" "$CONFIG_FILE"
-
-rm mapping_block.tmp
-echo "Success: Nginx mapping updated for $ENDPOINT"
+echo "Success: Nginx mapping updated for $ENDPOINT at line 8"
 
 # ==================================================================
 # PART 2: STARTUP SCRIPT UPDATE (PERSISTENCE)
@@ -96,9 +75,7 @@ echo "Success: Nginx mapping updated for $ENDPOINT"
 if [ -f "$STARTUP_SCRIPT" ]; then
     # Check if this container is already in the startup script
     if grep -q "name $REPO_NAME " "$STARTUP_SCRIPT"; then
-        echo "Startup Script: $REPO_NAME already exists. Updating image URI..."
-        # Update the image URI if the container already exists (optional but professional)
-        sed -i "s|docker run .* --name $REPO_NAME .*|docker run -d --name $REPO_NAME -p $HOST_PORT:5000 $IMAGE_URI >> \$LOG_FILE 2>&1|g" "$STARTUP_SCRIPT"
+        echo "Startup Script: $REPO_NAME already exists. Skipping."
     else
         echo "Startup Script: Adding persistence for $REPO_NAME..."
         
@@ -112,14 +89,10 @@ docker pull $IMAGE_URI >> \$LOG_FILE 2>&1
 docker run -d --name $REPO_NAME -p $HOST_PORT:5000 $IMAGE_URI >> \$LOG_FILE 2>&1
 EOF
         
-        # Insert after the marker
-        if grep -q "# Execute Docker Operations" "$STARTUP_SCRIPT"; then
-            sed -i "/# Execute Docker Operations/r docker_block.tmp" "$STARTUP_SCRIPT"
-        else
-            cat docker_block.tmp >> "$STARTUP_SCRIPT"
-        fi
+        # Insert at line 8 of the startup script
+        sed -i "8r docker_block.tmp" "$STARTUP_SCRIPT"
         rm docker_block.tmp
-        echo "Success: Added $REPO_NAME to startup.sh"
+        echo "Success: Added $REPO_NAME to startup.sh at line 8"
     fi
 else
     echo "Warning: Startup script not found at $STARTUP_SCRIPT"
