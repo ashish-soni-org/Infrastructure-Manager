@@ -10,7 +10,7 @@ permissions:
 
 env:
   OWNER: "ashish-soni-org"
-  TARGETED_REPOS: '["My-Website", "Monitoring", "Sentiment-Analysis", "Vehicle-Insurance-Eligibility-Prediction"]'
+  TARGETED_REPOS: '["My-Website", "Sentiment-Analysis", "Vehicle-Insurance-Eligibility-Prediction", "Monitoring"]'
 
 jobs:
 
