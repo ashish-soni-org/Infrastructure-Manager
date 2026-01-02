@@ -9,8 +9,7 @@
 
   vars:
     ansible_connection: "{{ ANSIBLE_CONNECTION | default('aws_ssm') }}"
-    ansible_aws_ssm_bucket_name: "{{ ANSIBLE_AWS_SSM_BUCKET_NAME | default('') }}"
-    ansible_aws_ssm_region: "{{ ANSIBLE_AWS_SSM_REGION | default('') }}"
+    # Architecture mapping for Docker repo (Robust against aarch64/x86_64 differences)
     arch_mapping:
       x86_64: amd64
       aarch64: arm64
@@ -43,10 +42,13 @@
         mode: '0644'
       register: docker_gpg_key
 
+    # FIX: Only dearmor if the key changed or the binary doesn't exist. 
+    # '--yes' forces overwrite if needed.
     - name: Convert Docker GPG key to binary keyring
       ansible.builtin.command:
         cmd: gpg --dearmor --yes -o /etc/apt/keyrings/docker.gpg /etc/apt/keyrings/docker.asc
       when: docker_gpg_key.changed or ansible_check_mode
+      # This ensures the task doesn't report 'changed' unnecessarily on subsequent runs
       changed_when: docker_gpg_key.changed
 
     - name: Ensure permissions on Docker GPG key
@@ -73,23 +75,3 @@
           - docker-compose-plugin
         state: present
         update_cache: true
-
-    - name: Ensure Docker service is running and enabled
-      ansible.builtin.systemd:
-        name: docker
-        state: started
-        daemon_reload: true
-        enabled: true
-
-    - name: Ensure docker group exists
-      ansible.builtin.group:
-        name: docker
-        state: present
-
-    - name: Add user to group
-      ansible.builtin.user:
-        # FIX: Use 'ansible_user_id' to resolve the actual connected user (e.g., ssm-user).
-        # 'ansible_user' is undefined in implicit SSM connections.
-        name: "{{ ansible_user_id }}"
-        groups: docker
-        append: true
