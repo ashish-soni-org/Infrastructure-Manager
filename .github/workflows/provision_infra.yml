@@ -522,7 +522,8 @@ jobs:
             
   deploy_website_and_projects:
     name: Trigger Repository Builds
-    needs: [hosting_runner, configure_nginx, startup_service_docker]
+    # needs: [hosting_runner, configure_nginx, startup_service_docker]
+    needs: [hosting_runner, configure_nginx]
     if: success() 
     runs-on: ubuntu-latest
     steps:
