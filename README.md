@@ -1,12 +1,6 @@
 🚀 Enterprise-Grade Cloud Provisioning & Configuration
 
-[![Terraform](https://img.shields.io/badge/Terraform-v1.5+-623CE4?style=for-the-badge&logo=terraform&logoColor=white)](https://www.terraform.io/)
-[![Ansible](https://img.shields.io/badge/Ansible-v2.14+-EE0000?style=for-the-badge&logo=ansible&logoColor=white)](https://www.ansible.com/)
-[![AWS](https://img.shields.io/badge/AWS-Cloud-232F3E?style=for-the-badge&logo=amazon-aws&logoColor=white)](https://aws.amazon.com/)
-[![CI/CD Status](https://img.shields.io/badge/Pipeline-Passing-success?style=for-the-badge&logo=github-actions&logoColor=white)]()
-[![License](https://img.shields.io/badge/License-MIT-blue.svg?style=for-the-badge)]()
-
-> **"Infrastructure is not just code; it is the blueprint of reliability."**
+**"Infrastructure is not just code; it is the blueprint of reliability."**
 
 ## 📖 Overview
 
