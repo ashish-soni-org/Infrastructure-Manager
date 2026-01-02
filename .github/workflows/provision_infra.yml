@@ -295,7 +295,7 @@ jobs:
           chmod 600 .vault_pass
 
       - name: Show file content on runner
-        run: cat ansible/docker/docker.yaml
+        run: cat docker.yaml
 
       - name: Run Ansible Playbook
         env:
