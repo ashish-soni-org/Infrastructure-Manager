@@ -25,9 +25,14 @@
     const body = document.body;
     const themeToggleBtn = document.getElementById("themeToggleBtn");
 
+    const moonIcon = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" /></svg>`;
+    const sunIcon = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" /></svg>`;
+
     function applyTheme(theme) {
         body.setAttribute("data-theme", theme);
-        themeToggleBtn.textContent = theme === "dark" ? "☀️ Light" : "🌙 Dark";
+        themeToggleBtn.innerHTML = theme === "dark" ? sunIcon : moonIcon;
+        // Tooltip update
+        themeToggleBtn.title = theme === "dark" ? "Switch to Light Mode" : "Switch to Dark Mode";
     }
 
     applyTheme(localStorage.getItem(THEME_KEY) || "dark");
@@ -175,7 +180,7 @@
         resCard.className = "resources-card";
         const chips = document.createElement("div");
         chips.className = "resource-chips";
-        
+
         ["EC2"].forEach(type => {
             const chip = document.createElement("div");
             chip.className = "chip" + (subnet.resources[type].enabled ? " active" : "");
@@ -219,7 +224,7 @@
 
     function renderStandaloneServices() {
         const mainCard = document.createElement("div");
-        mainCard.className = "standalone-card"; 
+        mainCard.className = "standalone-card";
 
         // 1. Selector Chips Row 
         const selectorRow = document.createElement("div");
@@ -241,13 +246,13 @@
 
         // 2. Render Cards for each Enabled Service
         const activeServices = Object.entries(state.standalone).filter(([_, data]) => data.enabled);
-        
+
         if (activeServices.length > 0) {
             activeServices.forEach(([type, data]) => {
                 ensureInstanceCount(data);
 
                 const serviceCard = document.createElement("div");
-                serviceCard.className = "subnet-card"; 
+                serviceCard.className = "subnet-card";
 
                 const headerRow = document.createElement("div");
                 headerRow.className = "row";
@@ -272,7 +277,7 @@
                     item.style.marginTop = "10px";
                     const row = document.createElement("div");
                     row.className = "row";
-                    
+
                     // --- UPDATED HINT LOGIC HERE ---
                     const hint = type === "S3" ? "bucket-name" : "repo-name";
                     // -------------------------------
@@ -287,11 +292,11 @@
                 mainCard.appendChild(serviceCard);
             });
         } else {
-             const emptyMsg = document.createElement("div");
-             emptyMsg.style.textAlign = "center";
-             emptyMsg.style.color = "var(--muted)";
-             emptyMsg.textContent = "Select a service above to configure resources.";
-             mainCard.appendChild(emptyMsg);
+            const emptyMsg = document.createElement("div");
+            emptyMsg.style.textAlign = "center";
+            emptyMsg.style.color = "var(--muted)";
+            emptyMsg.textContent = "Select a service above to configure resources.";
+            mainCard.appendChild(emptyMsg);
         }
 
         standaloneContainer.appendChild(mainCard);
@@ -369,7 +374,7 @@
 
         const destBtnText = state.isDestroying ? "Destroying..." : "Destroy All";
         const destBtn = createButton(destBtnText, "btn-destroy", state.isProvisioning || state.isDestroying, () => {
-            if(confirm("CRITICAL: This will destroy all resources in this state. Continue?")) {
+            if (confirm("CRITICAL: This will destroy all resources in this state. Continue?")) {
                 executeGitHubDispatch(generateManifest(), "destroy");
             }
         });
@@ -409,21 +414,21 @@
 
     document.getElementById("vpcIncrementBtn").onclick = () => { state.vpcs.push({ name: "", subnets: [createDefaultSubnet()] }); render(); };
     document.getElementById("vpcDecrementBtn").onclick = () => { state.vpcs.pop(); render(); };
-    document.getElementById("globalResetBtn").onclick = () => { 
-        state.vpcs = [{ name: "production-vpc", subnets: [createDefaultSubnet("main-subnet")] }]; 
+    document.getElementById("globalResetBtn").onclick = () => {
+        state.vpcs = [{ name: "production-vpc", subnets: [createDefaultSubnet("main-subnet")] }];
         state.standalone.S3.enabled = false;
         state.standalone.S3.count = 1;
         state.standalone.ECR.enabled = false;
         state.standalone.ECR.count = 1;
-        state.token = ""; 
-        render(); 
+        state.token = "";
+        render();
     };
 
     render();
 
     /* CI/CD LOGIC */
     const GITHUB_CONFIG = {
-        OWNER: "ashish-soni-org", 
+        OWNER: "ashish-soni-org",
         REPO: "Terraform-Ansible",
         EVENT_TYPE_APPLY: "event-provision-infra",
         EVENT_TYPE_DESTROY: "event-destroy-infra"
@@ -450,7 +455,7 @@
                     event_type: eventType,
                     client_payload: {
                         manifest: manifest,
-                        tf_action: action, 
+                        tf_action: action,
                         timestamp: new Date().toISOString()
                     }
                 })
