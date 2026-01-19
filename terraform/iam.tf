@@ -48,3 +48,25 @@ resource "aws_iam_role_policy" "s3_access" {
     ]
   })
 }
+
+resource "aws_iam_role_policy" "route53_access" {
+  name = "Ansible-SSM-Route53-Access"
+  role = aws_iam_role.ssm_role.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "route53:ListHostedZones",
+          "route53:ListResourceRecordSets",
+          "route53:ChangeResourceRecordSets",
+          "route53:GetChange",
+          "route53:GetHostedZone"
+        ]
+        Resource = "*"
+      }
+    ]
+  })
+}
