@@ -24,3 +24,26 @@ resource "aws_iam_instance_profile" "ec2_profile" {
   name = "Production-Server-SSM-Profile"
   role = aws_iam_role.ssm_role.name
 }
+
+resource "aws_iam_role_policy" "s3_access" {
+  name = "Ansible-SSM-S3-Access"
+  role = aws_iam_role.ssm_role.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "s3:GetObject",
+          "s3:PutObject",
+          "s3:ListBucket",
+          "s3:GetBucketLocation",
+          "s3:AbortMultipartUpload",
+          "s3:DeleteObject" 
+        ]
+        Resource = "*"
+      }
+    ]
+  })
+}
