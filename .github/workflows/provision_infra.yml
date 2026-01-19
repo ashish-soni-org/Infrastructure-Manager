@@ -99,7 +99,7 @@ jobs:
           # NOTE: Structure is now .ui_manifest.vpcs[].subnets...
           
           ATTACH_RUNNER=$(jq '[.ui_manifest.vpcs[].subnets[].resources[] | select(.type=="EC2").instances[].services[] | select(. == "Self-Hosted-Runner")] | length > 0' terraform.tfvars.json)
-          EXTRA_RAM=$(jq '[.ui_manifest.vpcs[].subnets[].resources[] | select(.type=="EC2").instances[].services[] | select(. == "Extra-RAM")] | length > 0' terraform.tfvars.json)
+          EXTRA_RAM=$(jq '[.ui_manifest.vpcs[].subnets[].resources[] | select(.type=="EC2").instances[].services[] | select(. == "Extra RAM")] | length > 0' terraform.tfvars.json)
           NGINX=$(jq '[.ui_manifest.vpcs[].subnets[].resources[] | select(.type=="EC2").instances[].services[] | select(. == "NGINX")] | length > 0' terraform.tfvars.json)
           MAP_DOMAIN=$(jq '[.ui_manifest.vpcs[].subnets[].resources[] | select(.type=="EC2").instances[].services[] | select(. == "Map Domain")] | length > 0' terraform.tfvars.json)
           DOCKER=$(jq '[.ui_manifest.vpcs[].subnets[].resources[] | select(.type=="EC2").instances[].services[] | select(. == "Docker")] | length > 0' terraform.tfvars.json)
@@ -151,7 +151,7 @@ jobs:
           ANSIBLE_CONFIG: "../ansible.cfg"
           ANSIBLE_HOST_KEY_CHECKING: "False"
         run: |
-          IDS=$(echo '${{ needs.resource_provision.outputs.service_inventory }}' | jq -r '."Extra-RAM"')
+          IDS=$(echo '${{ needs.resource_provision.outputs.service_inventory }}' | jq -r '."Extra RAM"')
           
           ansible-playbook \
             -i "$IDS," \
