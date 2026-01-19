@@ -40,7 +40,8 @@ resource "aws_iam_role_policy" "s3_access" {
           "s3:ListBucket",
           "s3:GetBucketLocation",
           "s3:AbortMultipartUpload",
-          "s3:DeleteObject" 
+          "s3:DeleteObject",
+          "s3:CreateBucket"
         ]
         Resource = "*"
       }
