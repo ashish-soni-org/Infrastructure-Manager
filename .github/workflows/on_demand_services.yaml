@@ -85,6 +85,7 @@ jobs:
       - name: Initialize Terraform
         run: |
           terraform init \
+            -lock-timeout=20m \
             -backend-config="bucket=${{ secrets.AWS_TF_STATE_FILE_BUCKET }}" \
             -backend-config="key=${{ secrets.AWS_TF_STATE_FILE_PATH }}" \
             -backend-config="region=${{ secrets.AWS_REGION_NAME }}" \
@@ -92,7 +93,7 @@ jobs:
             -backend-config="dynamodb_table=${{ secrets.AWS_TF_STATE_LOCK_TABLE }}"
 
       - name: Terraform Apply
-        run: terraform apply -auto-approve
+        run: terraform apply -auto-approve -lock-timeout=20m
 
       - name: Capture Terraform Outputs
         id: tf_outputs
