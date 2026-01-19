@@ -82,7 +82,7 @@ resource "aws_instance" "EC2" {
 
   ami                  = each.value.ami
   instance_type        = each.value.instance_type
-  iam_instance_profile = data.aws_iam_instance_profile.ec2_profile.name
+  iam_instance_profile = aws_iam_instance_profile.ec2_profile.name
   subnet_id            = aws_subnet.SUBNET[each.value.subnet_key].id
   
   vpc_security_group_ids = [
