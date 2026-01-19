@@ -556,7 +556,5 @@ jobs:
               exit 1
             else
               echo "Successfully triggered $REPO"
-              echo "Waiting 120 seconds before next trigger..."
-              sleep 120
             fi
           done
