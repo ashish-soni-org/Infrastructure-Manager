@@ -4,7 +4,7 @@
     const MIN = 1;
     const MAX = 5;
     const THEME_KEY = "provision_theme_v3";
-    const AVAILABLE_COMPUTE_SERVICES = ["Self-Hosted-Runner", "NGINX", "Docker", "MiniKube", "Map Domain", "SSL Certified"];
+    const AVAILABLE_COMPUTE_SERVICES = ["Self-Hosted-Runner", "Extra RAM", "NGINX", "Docker", "MiniKube", "Map Domain", "SSL Certified"];
 
     // Default State Initialization
     const state = {

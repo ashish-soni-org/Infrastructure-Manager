@@ -26,6 +26,7 @@ jobs:
 
     outputs:
       attach_runner: ${{ steps.service_check.outputs.attach_runner }}
+      run_extra_ram: ${{ steps.service_check.outputs.run_extra_ram }}
       run_nginx: ${{ steps.service_check.outputs.run_nginx }}
       map_domain: ${{ steps.service_check.outputs.map_domain }}
       run_docker: ${{ steps.service_check.outputs.run_docker }}
@@ -98,12 +99,14 @@ jobs:
           # NOTE: Structure is now .ui_manifest.vpcs[].subnets...
           
           ATTACH_RUNNER=$(jq '[.ui_manifest.vpcs[].subnets[].resources[] | select(.type=="EC2").instances[].services[] | select(. == "Self-Hosted-Runner")] | length > 0' terraform.tfvars.json)
+          EXTRA_RAM=$(jq '[.ui_manifest.vpcs[].subnets[].resources[] | select(.type=="EC2").instances[].services[] | select(. == "Extra-RAM")] | length > 0' terraform.tfvars.json)
           NGINX=$(jq '[.ui_manifest.vpcs[].subnets[].resources[] | select(.type=="EC2").instances[].services[] | select(. == "NGINX")] | length > 0' terraform.tfvars.json)
           MAP_DOMAIN=$(jq '[.ui_manifest.vpcs[].subnets[].resources[] | select(.type=="EC2").instances[].services[] | select(. == "Map Domain")] | length > 0' terraform.tfvars.json)
           DOCKER=$(jq '[.ui_manifest.vpcs[].subnets[].resources[] | select(.type=="EC2").instances[].services[] | select(. == "Docker")] | length > 0' terraform.tfvars.json)
           MINIKUBE=$(jq '[.ui_manifest.vpcs[].subnets[].resources[] | select(.type=="EC2").instances[].services[] | select(. == "MiniKube")] | length > 0' terraform.tfvars.json)
           
           echo "attach_runner=$ATTACH_RUNNER" >> $GITHUB_OUTPUT
+          echo "run_extra_ram=$EXTRA_RAM" >> $GITHUB_OUTPUT
           echo "run_nginx=$NGINX" >> $GITHUB_OUTPUT
           echo "map_domain=$MAP_DOMAIN" >> $GITHUB_OUTPUT
           echo "run_docker=$DOCKER" >> $GITHUB_OUTPUT
@@ -117,7 +120,7 @@ jobs:
   increase_ram:
     name: Upgrade RAM size
     needs: resource_provision
-    if: success()
+    if: needs.resource_provision.outputs.run_extra_ram == 'true'
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -148,7 +151,7 @@ jobs:
           ANSIBLE_CONFIG: "../ansible.cfg"
           ANSIBLE_HOST_KEY_CHECKING: "False"
         run: |
-          IDS=$(echo '${{ needs.resource_provision.outputs.service_inventory }}' | jq -r '.NGINX')
+          IDS=$(echo '${{ needs.resource_provision.outputs.service_inventory }}' | jq -r '."Extra-RAM"')
           
           ansible-playbook \
             -i "$IDS," \
@@ -163,7 +166,7 @@ jobs:
   # ----------------------------------------------------
   hosting_runner:
     name: Configure Self-Hosted Runners
-    needs: [resource_provision, increase_ram]
+    needs: [resource_provision]
     if: needs.resource_provision.outputs.attach_runner == 'true'
     runs-on: ubuntu-latest
     defaults:
@@ -222,7 +225,7 @@ jobs:
   # NGINX
   install_nginx:
     name: Install NGINX
-    needs: [resource_provision, increase_ram]
+    needs: [resource_provision]
     if: needs.resource_provision.outputs.run_nginx == 'true'
     runs-on: ubuntu-latest
     defaults:
@@ -267,7 +270,7 @@ jobs:
   # DOCKER
   install_docker:
     name: Install Docker
-    needs: [resource_provision, increase_ram]
+    needs: [resource_provision]
     if: needs.resource_provision.outputs.run_docker == 'true'
     runs-on: ubuntu-latest
     defaults:
@@ -364,7 +367,6 @@ jobs:
   configure_nginx:
     name: Configure NGINX VHosts
     needs: [resource_provision, install_nginx]
-    # Run whenever NGINX is installed, regardless of domain mapping
     # if: needs.resource_provision.outputs.run_nginx == 'true'
     runs-on: ubuntu-latest
     defaults:
