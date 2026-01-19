@@ -70,3 +70,28 @@ resource "aws_iam_role_policy" "route53_access" {
     ]
   })
 }
+
+resource "aws_iam_role_policy" "ecr_access" {
+  name = "Ansible-SSM-ECR-Access"
+  role = aws_iam_role.ssm_role.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "ecr:GetAuthorizationToken",
+          "ecr:BatchCheckLayerAvailability",
+          "ecr:GetDownloadUrlForLayer",
+          "ecr:BatchGetImage",
+          "ecr:DescribeRepositories",
+          "ecr:ListImages",
+          "ecr:DescribeImages",
+          "ecr:GetRepositoryPolicy"
+        ]
+        Resource = "*"
+      }
+    ]
+  })
+}
