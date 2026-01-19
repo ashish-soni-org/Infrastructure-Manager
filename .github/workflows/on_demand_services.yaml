@@ -88,7 +88,8 @@ jobs:
             -backend-config="bucket=${{ secrets.AWS_TF_STATE_FILE_BUCKET }}" \
             -backend-config="key=${{ secrets.AWS_TF_STATE_FILE_PATH }}" \
             -backend-config="region=${{ secrets.AWS_REGION_NAME }}" \
-            -backend-config="encrypt=true"
+            -backend-config="encrypt=true" \
+            -backend-config="dynamodb_table=${{ secrets.AWS_TF_STATE_LOCK_TABLE }}"
 
       - name: Terraform Apply
         run: terraform apply -auto-approve
