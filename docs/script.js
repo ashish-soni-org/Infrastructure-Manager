@@ -30,7 +30,20 @@
         themeToggleBtn.textContent = theme === "dark" ? "☀️ Light" : "🌙 Dark";
     }
 
-    applyTheme(localStorage.getItem(THEME_KEY) || "dark");
+    // Initialize with saved preference or system default
+    const savedTheme = localStorage.getItem(THEME_KEY);
+    const systemPrefersDark = window.matchMedia("(prefers-color-scheme: dark)");
+    const defaultTheme = savedTheme || (systemPrefersDark.matches ? "dark" : "light");
+
+    applyTheme(defaultTheme);
+
+    // Listen for system theme changes
+    systemPrefersDark.addEventListener("change", (e) => {
+        if (!localStorage.getItem(THEME_KEY)) {
+            const newTheme = e.matches ? "dark" : "light";
+            applyTheme(newTheme);
+        }
+    });
 
     themeToggleBtn.onclick = () => {
         const next = body.dataset.theme === "dark" ? "light" : "dark";
@@ -175,7 +188,7 @@
         resCard.className = "resources-card";
         const chips = document.createElement("div");
         chips.className = "resource-chips";
-        
+
         ["EC2"].forEach(type => {
             const chip = document.createElement("div");
             chip.className = "chip" + (subnet.resources[type].enabled ? " active" : "");
@@ -219,7 +232,7 @@
 
     function renderStandaloneServices() {
         const mainCard = document.createElement("div");
-        mainCard.className = "standalone-card"; 
+        mainCard.className = "standalone-card";
 
         // 1. Selector Chips Row 
         const selectorRow = document.createElement("div");
@@ -241,13 +254,13 @@
 
         // 2. Render Cards for each Enabled Service
         const activeServices = Object.entries(state.standalone).filter(([_, data]) => data.enabled);
-        
+
         if (activeServices.length > 0) {
             activeServices.forEach(([type, data]) => {
                 ensureInstanceCount(data);
 
                 const serviceCard = document.createElement("div");
-                serviceCard.className = "subnet-card"; 
+                serviceCard.className = "subnet-card";
 
                 const headerRow = document.createElement("div");
                 headerRow.className = "row";
@@ -272,7 +285,7 @@
                     item.style.marginTop = "10px";
                     const row = document.createElement("div");
                     row.className = "row";
-                    
+
                     // --- UPDATED HINT LOGIC HERE ---
                     const hint = type === "S3" ? "bucket-name" : "repo-name";
                     // -------------------------------
@@ -287,11 +300,11 @@
                 mainCard.appendChild(serviceCard);
             });
         } else {
-             const emptyMsg = document.createElement("div");
-             emptyMsg.style.textAlign = "center";
-             emptyMsg.style.color = "var(--muted)";
-             emptyMsg.textContent = "Select a service above to configure resources.";
-             mainCard.appendChild(emptyMsg);
+            const emptyMsg = document.createElement("div");
+            emptyMsg.style.textAlign = "center";
+            emptyMsg.style.color = "var(--muted)";
+            emptyMsg.textContent = "Select a service above to configure resources.";
+            mainCard.appendChild(emptyMsg);
         }
 
         standaloneContainer.appendChild(mainCard);
@@ -369,7 +382,7 @@
 
         const destBtnText = state.isDestroying ? "Destroying..." : "Destroy All";
         const destBtn = createButton(destBtnText, "btn-destroy", state.isProvisioning || state.isDestroying, () => {
-            if(confirm("CRITICAL: This will destroy all resources in this state. Continue?")) {
+            if (confirm("CRITICAL: This will destroy all resources in this state. Continue?")) {
                 executeGitHubDispatch(generateManifest(), "destroy");
             }
         });
@@ -409,21 +422,21 @@
 
     document.getElementById("vpcIncrementBtn").onclick = () => { state.vpcs.push({ name: "", subnets: [createDefaultSubnet()] }); render(); };
     document.getElementById("vpcDecrementBtn").onclick = () => { state.vpcs.pop(); render(); };
-    document.getElementById("globalResetBtn").onclick = () => { 
-        state.vpcs = [{ name: "production-vpc", subnets: [createDefaultSubnet("main-subnet")] }]; 
+    document.getElementById("globalResetBtn").onclick = () => {
+        state.vpcs = [{ name: "production-vpc", subnets: [createDefaultSubnet("main-subnet")] }];
         state.standalone.S3.enabled = false;
         state.standalone.S3.count = 1;
         state.standalone.ECR.enabled = false;
         state.standalone.ECR.count = 1;
-        state.token = ""; 
-        render(); 
+        state.token = "";
+        render();
     };
 
     render();
 
     /* CI/CD LOGIC */
     const GITHUB_CONFIG = {
-        OWNER: "ashish-soni-org", 
+        OWNER: "ashish-soni-org",
         REPO: "Terraform-Ansible",
         EVENT_TYPE_APPLY: "event-provision-infra",
         EVENT_TYPE_DESTROY: "event-destroy-infra"
@@ -450,7 +463,7 @@
                     event_type: eventType,
                     client_payload: {
                         manifest: manifest,
-                        tf_action: action, 
+                        tf_action: action,
                         timestamp: new Date().toISOString()
                     }
                 })
