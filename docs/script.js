@@ -23,33 +23,21 @@
 
     /* Theme Engine */
     const body = document.body;
-    const themeToggleBtn = document.getElementById("themeToggleBtn");
 
     function applyTheme(theme) {
         body.setAttribute("data-theme", theme);
-        themeToggleBtn.textContent = theme === "dark" ? "☀️ Light" : "🌙 Dark";
     }
 
-    // Initialize with saved preference or system default
-    const savedTheme = localStorage.getItem(THEME_KEY);
+    // Initialize with system default
     const systemPrefersDark = window.matchMedia("(prefers-color-scheme: dark)");
-    const defaultTheme = savedTheme || (systemPrefersDark.matches ? "dark" : "light");
-
-    applyTheme(defaultTheme);
+    const initialTheme = systemPrefersDark.matches ? "dark" : "light";
+    applyTheme(initialTheme);
 
     // Listen for system theme changes
     systemPrefersDark.addEventListener("change", (e) => {
-        if (!localStorage.getItem(THEME_KEY)) {
-            const newTheme = e.matches ? "dark" : "light";
-            applyTheme(newTheme);
-        }
+        const newTheme = e.matches ? "dark" : "light";
+        applyTheme(newTheme);
     });
-
-    themeToggleBtn.onclick = () => {
-        const next = body.dataset.theme === "dark" ? "light" : "dark";
-        localStorage.setItem(THEME_KEY, next);
-        applyTheme(next);
-    };
 
     /* Tab Switching Logic */
     const tabButtons = document.querySelectorAll(".tab-btn");
