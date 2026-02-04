@@ -1,5 +1,5 @@
 ---
-- name: Swap Space Configuration
+- name: Swap Space Configuration 
   hosts: all
   gather_facts: false
   become: true

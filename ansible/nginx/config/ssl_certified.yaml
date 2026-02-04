@@ -1,4 +1,4 @@
-- name: Obtain SSL Certificate using Certbot
+- name: Obtain SSL Certificate using Certbot 
   hosts: all
   gather_facts: false
   become: true

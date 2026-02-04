@@ -1,5 +1,5 @@
 ---
-- name: Install and start runner on instance
+- name: Install and start runner on instance 
   hosts: all
   gather_facts: true
   become: true

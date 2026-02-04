@@ -1,4 +1,4 @@
-name: Infrastructure Provisioning and Configuring
+name: Infrastructure Provisioning and Configuring 
 
 on:
   repository_dispatch:

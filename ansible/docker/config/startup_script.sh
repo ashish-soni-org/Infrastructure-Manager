@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/bash 
 
 # Arguments passed from Ansible
 FILE_PATH=$1

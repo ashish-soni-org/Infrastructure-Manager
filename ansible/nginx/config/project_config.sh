@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/bash 
 
 # Arguments
 CONFIG_FILE=$(readlink -f "$1")

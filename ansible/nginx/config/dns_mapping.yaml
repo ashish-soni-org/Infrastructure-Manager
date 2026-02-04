@@ -1,4 +1,4 @@
-- name: Map EC2 to domain in Route53
+- name: Map EC2 to domain in Route53 
   hosts: all
   gather_facts: false
   become: true

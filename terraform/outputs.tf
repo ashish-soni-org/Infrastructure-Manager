@@ -1,4 +1,4 @@
-output "service_inventory" {
+output "service_inventory" { 
   description = "JSON-compatible map of Services to EC2 Instance IDs for Ansible Inventory"
   value = {
     for service in distinct(flatten([for inst in local.ec2_instances_flat : inst.services])) :

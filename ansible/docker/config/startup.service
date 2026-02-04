@@ -1,4 +1,4 @@
-[Unit]
+[Unit] 
 Description=Run ECR container startup script
 After=docker.service
 Requires=docker.service

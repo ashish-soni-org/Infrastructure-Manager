@@ -1,4 +1,4 @@
-resource "aws_iam_role" "ssm_role" {
+resource "aws_iam_role" "ssm_role" { 
   name = "Production-Server-SSM-Role"
 
   assume_role_policy = jsonencode({

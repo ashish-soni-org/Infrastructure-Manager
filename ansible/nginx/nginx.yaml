@@ -1,4 +1,4 @@
-- name: Install and start Nginx on Ubuntu
+- name: Install and start Nginx on Ubuntu 
   hosts: all
   gather_facts: false
   become: true
