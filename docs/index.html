@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="color-scheme" content="light dark">
+    <title>Infrastructure Manager</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+    <div class="background-blobs">
+        <div class="blob blob-1"></div>
+        <div class="blob blob-2"></div>
+        <div class="blob blob-3"></div>
+    </div>
+
+    <div class="glass-container">
+        <header>
+            <h1 class="page-title">Infrastructure Manager</h1>
+        </header>
+
+        <main class="grid-layout">
+            <section class="glass-card">
+                <h2>Compute resources</h2>
+                <div class="resource-group">
+                    <h3 class="group-label">VPCs</h3>
+                    <div class="chip-container" id="vpc-chips">
+                    </div>
+                </div>
+
+                <div class="resource-group">
+                    <h3 class="group-label">Subnets</h3>
+                    <div class="chip-container" id="subnet-chips">
+                    </div>
+                </div>
+
+                <div class="resource-group">
+                    <h3 class="group-label">EC2 Instances</h3>
+                    <div class="chip-container" id="ec2-chips">
+                    </div>
+                </div>
+            </section>
+
+            <section class="glass-card">
+                <h2>Global resources</h2>
+                <div class="global-resources-split">
+                    <div class="global-section">
+                        <div class="global-section-header">
+                            <div style="display: flex; align-items: center;">
+                                <h3 class="group-label" style="margin-bottom: 0;">S3</h3>
+                                <span id="s3-help-icon"></span>
+                            </div>
+                            <div id="s3-counter"></div>
+                        </div>
+                        <div class="chip-container" id="s3-chips"></div>
+                        <div class="active-blue-container" id="s3-available-container" style="margin-top: 1rem;">
+                            <div
+                                style="font-weight: 600; margin-bottom: 0.5rem; text-decoration: underline; text-align: center;">
+                                Available
+                                S3 Buckets</div>
+                            <div id="s3-available-list"
+                                style="color: var(--text-muted); font-style: italic; text-align: center;">No
+                                resources created yet</div>
+                        </div>
+                    </div>
+                    <div class="global-section">
+                        <div class="global-section-header">
+                            <div style="display: flex; align-items: center;">
+                                <h3 class="group-label" style="margin-bottom: 0;">ECR</h3>
+                                <span id="ecr-help-icon"></span>
+                            </div>
+                            <div id="ecr-counter"></div>
+                        </div>
+                        <div class="chip-container" id="ecr-chips"></div>
+                        <div class="active-blue-container" id="ecr-available-container" style="margin-top: 1rem;">
+                            <div
+                                style="font-weight: 600; margin-bottom: 0.5rem; text-decoration: underline; text-align: center;">
+                                Available
+                                ECR Repositories</div>
+                            <div id="ecr-available-list"
+                                style="color: var(--text-muted); font-style: italic; text-align: center;">No
+                                resources created yet</div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section class="glass-card">
+                <h2>Repositories</h2>
+                <div class="repositories-layout" style="position: relative;">
+                    <!-- SVG Overlay for connections -->
+                    <svg id="connection-svg"
+                        style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 10;">
+                        <defs>
+                            <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+                                <path d="M 2 1.5 Q 2 1 2.5 1.2 L 8.5 3.3 Q 9 3.5 8.5 3.7 L 2.5 5.8 Q 2 6 2 5.5 Z"
+                                    fill="#10b981" />
+                            </marker>
+                        </defs>
+
+
+                    </svg>
+
+                    <!-- Available Repositories Section -->
+                    <div class="repo-column" style="position: relative; z-index: 2;">
+                        <h3 class="group-label"
+                            style="text-align: center; text-decoration: underline; margin-bottom: 1rem;">Available
+                            repositories</h3>
+
+                        <!-- Table Header -->
+                        <div class="table-header-row">
+                            <div class="header-item">Repository</div>
+                            <div class="header-item">Provided Resources</div>
+                        </div>
+
+                        <!-- Container List (will be populated dynamically) -->
+                        <div id="available-repos-list" class="repo-rows-container">
+                            <!-- Placeholder when empty -->
+                            <div class="active-green-container placeholder-row" style="margin-top: 0;">
+                                <div
+                                    style="color: var(--text-muted); font-style: italic; text-align: center; width: 100%;">
+                                    No repositories available yet</div>
+                            </div>
+                        </div>
+                    </div>
+
+
+                    <!-- Instances Section -->
+                    <div class="repo-column" style="position: relative; z-index: 2;">
+                        <h3 class="group-label"
+                            style="text-align: center; text-decoration: underline; margin-bottom: 1rem;">Instances</h3>
+
+                        <!-- Table Header -->
+                        <div class="table-header-row">
+                            <div class="header-item">Deployed Repositories</div>
+                            <div class="header-item">Configurations</div>
+                        </div>
+
+                        <!-- Dynamic Instances List -->
+                        <div id="instances-list-container" class="repo-rows-container">
+                            <!-- Placeholder -->
+                            <div class="active-green-container placeholder-row" style="margin-top: 0;">
+                                <div
+                                    style="color: var(--text-muted); font-style: italic; text-align: center; width: 100%;">
+                                    No instances available yet</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section class="glass-card">
+                <h2>Deploy method</h2>
+                <div id="deploy-methods-container" class="deploy-options">
+                    <!-- Methods will be rendered dynamically from JSON -->
+                </div>
+            </section>
+
+
+            <section class="glass-card full-width">
+                <h2>Live Provisioning Manifest</h2>
+                <div id="manifest-tree-root" class="manifest-tree-container">
+                    <svg id="manifest-svg" class="manifest-svg-layer"></svg>
+                    <!-- Tree levels will be rendered here -->
+                </div>
+
+            </section>
+
+        </main>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+
+</html>

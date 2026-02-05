@@ -1,0 +1,166 @@
+{
+  "compute": [
+    {
+      "name": "VPC-Production",
+      "subnets": [
+        {
+          "name": "Prod-Public-Subnet-A",
+          "ec2s": [
+            {
+              "name": "Web-Server-01",
+              "type": "t3.medium"
+            },
+            {
+              "name": "Web-Server-02",
+              "type": "t3.medium"
+            }
+          ]
+        },
+        {
+          "name": "Prod-Private-Subnet-A",
+          "ec2s": [
+            {
+              "name": "App-Worker-Core",
+              "type": "t3.large"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "VPC-Shared-Services",
+      "subnets": [
+        {
+          "name": "Management-Subnet",
+          "ec2s": [
+            {
+              "name": "Bastion-Host",
+              "type": "t3.micro"
+            },
+            {
+              "name": "Monitoring-Node",
+              "type": "t3.small"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "VPC-Staging",
+      "subnets": [
+        {
+          "name": "Staging-App-Subnet",
+          "ec2s": [
+            {
+              "name": "Staging-Web-1",
+              "type": "t3.medium"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "global": {
+    "s3": [
+      "static-assets-prd",
+      "user-uploads-bucket"
+    ],
+    "ecr": [
+      "frontend-base",
+      "api-core-service"
+    ]
+  },
+  "deploy": {
+    "options": [
+      {
+        "id": "classic",
+        "title": "Classic (NGINX)",
+        "description": "Direct edge deployment via NGINX reverse proxy"
+      },
+      {
+        "id": "kubernetes",
+        "title": "Kubernetes (KIND)",
+        "description": "Local Kubernetes orchestration using KIND"
+      }
+    ],
+    "active": "classic"
+  },
+  "repositories": [
+    {
+      "name": "frontend-app",
+      "resources": "Docker, SSL, Runner"
+    },
+    {
+      "name": "api-service",
+      "resources": "Docker, Runner"
+    },
+    {
+      "name": "worker-node",
+      "resources": "Docker"
+    }
+  ],
+  "instances": [
+    {
+      "name": "Web-Server-01",
+      "repos": "frontend-app",
+      "configGroups": [
+        {
+          "label": "Instance",
+          "values": [
+            "t3.medium"
+          ]
+        },
+        {
+          "label": "Storage",
+          "values": [
+            "8GB gp3"
+          ]
+        },
+        {
+          "label": "Network",
+          "values": [
+            "Public IP"
+          ]
+        },
+        {
+          "label": "Features",
+          "values": [
+            "Docker",
+            "SSL"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "App-Worker-A",
+      "repos": "api-service, worker-node",
+      "configGroups": [
+        {
+          "label": "Instance",
+          "values": [
+            "t3.large"
+          ]
+        },
+        {
+          "label": "Storage",
+          "values": [
+            "30GB gp3"
+          ]
+        },
+        {
+          "label": "Network",
+          "values": [
+            "Private IP"
+          ]
+        },
+        {
+          "label": "Features",
+          "values": [
+            "Runner",
+            "Docker"
+          ]
+        }
+      ]
+    }
+  ]
+}
