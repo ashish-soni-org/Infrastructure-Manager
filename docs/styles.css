@@ -137,7 +137,7 @@ body {
 
 /* Glassmorphism Container */
 .glass-container {
-    width: 80%;
+    width: 90%;
     margin: 0 auto;
     padding: 2rem;
     z-index: 1;
@@ -1035,4 +1035,104 @@ path.connection-path:hover {
     to {
         stroke-dashoffset: -100;
     }
+}
+
+
+/* Floating PAT Token Bar */
+.pat-floating-bar {
+    position: fixed;
+    bottom: 2rem;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem;
+    padding: 0.75rem 1.5rem;
+    border-radius: 50px;
+    background: rgba(18, 18, 18, 0.85);
+    border: 1px solid var(--glass-border);
+    backdrop-filter: blur(12px);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+    width: 90%;
+    max-width: none;
+    animation: slideUp 0.5s ease-out;
+}
+
+@keyframes slideUp {
+    from {
+        transform: translate(-50%, 100px);
+        opacity: 0;
+    }
+
+    to {
+        transform: translate(-50%, 0);
+        opacity: 1;
+    }
+}
+
+.pat-icon {
+    font-size: 1.2rem;
+}
+
+.pat-label {
+    font-weight: 500;
+    color: var(--text-color);
+    white-space: nowrap;
+}
+
+.pat-input {
+    flex: 1;
+    /* Take up remaining space */
+    width: 100%;
+    padding: 0.5rem 1rem;
+    border-radius: 20px;
+    font-size: 0.9rem;
+    margin-top: 0;
+    /* Override any global input margins */
+    background: rgba(255, 255, 255, 0.2);
+    /* Lighter background for better contrast against blue */
+    color: #fff;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.pat-input::placeholder {
+    color: rgba(255, 255, 255, 0.7);
+}
+
+.pat-input:focus {
+    width: 100%;
+    /* Maintain full width */
+    background: rgba(255, 255, 255, 0.3);
+    border-color: #fff;
+}
+
+.pat-apply-btn {
+    padding: 0.5rem 1.25rem;
+    border-radius: 20px;
+    font-size: 0.9rem;
+    white-space: nowrap;
+    background: linear-gradient(135deg, #FFD700, #FFA500);
+    color: #000;
+    font-weight: 600;
+    border: none;
+    cursor: pointer;
+    box-shadow: 0 2px 10px rgba(255, 215, 0, 0.3);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.pat-apply-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(255, 215, 0, 0.5);
+}
+
+/* Full Width Utility to break out of parent container */
+.glass-card.full-width {
+    width: 95vw;
+    margin-left: calc(-47.5vw + 50%);
+    margin-right: calc(-47.5vw + 50%);
+    border-radius: 0;
+    border-left: none;
+    border-right: none;
 }

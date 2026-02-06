@@ -156,8 +156,15 @@
 
             <section class="glass-card">
                 <h2>Deploy method</h2>
-                <div id="deploy-methods-container" class="deploy-options">
-                    <!-- Methods will be rendered dynamically from JSON -->
+                <div class="deploy-method-container">
+                    <div class="deploy-option active" id="deploy-classic" onclick="selectDeployMethod('classic')">
+                        <div class="option-title">Classic (NGINX)</div>
+                        <div class="option-description">Direct edge deployment via NGINX reverse proxy</div>
+                    </div>
+                    <div class="deploy-option" id="deploy-kubernetes" onclick="selectDeployMethod('kubernetes')">
+                        <div class="option-title">Kubernetes (KIND)</div>
+                        <div class="option-description">Local Kubernetes orchestration using KIND</div>
+                    </div>
                 </div>
             </section>
 
@@ -172,6 +179,15 @@
             </section>
 
         </main>
+
+        <!-- Floating PAT Token Bar -->
+        <div class="pat-floating-bar glass-panel">
+            <span class="pat-icon">🔑</span>
+            <span class="pat-label">PAT Token</span>
+            <input type="password" class="glass-input pat-input" placeholder="Enter your PAT Token"
+                aria-label="PAT Token">
+            <button class="glass-btn primary-btn pat-apply-btn">Apply Changes</button>
+        </div>
     </div>
 
     <script src="script.js"></script>

@@ -1,99 +1,121 @@
-// Global Data State
-let appData = {
-    compute: [],
-    global: { s3: [], ecr: [] },
-    deploy: { options: [], active: '' },
-    repositories: [],
-    instances: []
-};
-
-// Legacy mappings for backward compatibility during refactor
+// Data mapping for VPCs and their Subnets
+// Data mapping for VPCs and their Subnets
 let vpcData = {};
+
+// Data mapping for Subnets and their EC2 Instances
 let subnetData = {};
 
-// Fetch and load resources from JSON
+// Initialize Application
 async function loadResources() {
     try {
-        const response = await fetch('aws_resources.json?t=' + Date.now());
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
+        const response = await fetch('aws_resources.json');
+        if (!response.ok) throw new Error('Failed to load resources');
+
         const data = await response.json();
 
-        // Basic structural check
-        if (data.compute && Array.isArray(data.compute)) {
-            appData = data;
-        } else if (Array.isArray(data)) {
-            // Backward compatibility for old flat array format
-            appData.compute = data;
+        // Handle both old array format and new object format
+        if (Array.isArray(data)) {
+            vpcData = {};
+            subnetData = {};
+            data.forEach(vpc => {
+                vpcData[vpc.name] = vpc.subnets.map(s => s.name);
+                vpc.subnets.forEach(subnet => {
+                    subnetData[subnet.name] = subnet.ec2s.map(e => e.name);
+                });
+            });
+        } else {
+            // Process Resources (VPCs)
+            vpcData = {};
+            subnetData = {};
+            if (data.resources) {
+                data.resources.forEach(vpc => {
+                    vpcData[vpc.name] = vpc.subnets.map(s => s.name);
+                    vpc.subnets.forEach(subnet => {
+                        subnetData[subnet.name] = subnet.ec2s.map(e => e.name);
+                    });
+                });
+            }
+
+            // Process Global Resources
+            if (data.global_resources) {
+                renderGlobalResources(data.global_resources);
+            }
+
+            // Process Deploy Methods
+            if (data.deploy_methods) {
+                renderDeployMethods(data.deploy_methods);
+            }
         }
 
-        // Re-populate legacy mappings for functions that still use them
-        vpcData = {};
-        subnetData = {};
-        appData.compute.forEach(vpc => {
-            vpcData[vpc.name] = vpc.subnets.map(s => s.name);
-            vpc.subnets.forEach(subnet => {
-                subnetData[subnet.name] = subnet.ec2s.map(e => e.name);
-            });
-        });
-
-        // Initialize Global Counters from appData
-        initGlobalCounters();
-
-        // Initial UI Renders
         renderVPCs();
         updateSubnets(null);
         updateEC2s(null);
-        renderDeployMethods();
-        renderAvailableRepos();
-        renderInstances();
-        renderManifestTree();
+        if (typeof renderManifestTree === 'function') {
+            renderManifestTree();
+        }
 
     } catch (e) {
         console.error("Could not load resources:", e);
+        // Ensure UI is usable even on error/empty
         renderVPCs();
+        updateSubnets(null);
+        updateEC2s(null);
     }
 }
 
-function initGlobalCounters() {
-    const s3Counter = document.getElementById('s3-counter');
-    const ecrCounter = document.getElementById('ecr-counter');
-    const s3Chips = document.getElementById('s3-chips');
-    const ecrChips = document.getElementById('ecr-chips');
+function renderGlobalResources(globals) {
+    if (!globals) return;
 
-    if (s3Counter && s3Chips) {
-        s3Counter.innerHTML = '';
-        s3Chips.innerHTML = '';
-        createCounter('s3-counter', 's3-chips', 'S3 Bucket', true, appData.global?.s3 || []);
+    // Render S3
+    const s3List = document.getElementById('s3-available-list');
+    const s3Counter = document.getElementById('s3-count-value');
+    if (s3List && globals.s3) {
+        s3List.innerHTML = '';
+        globals.s3.forEach(bucket => {
+            const chip = document.createElement('div');
+            chip.className = 'action-chip';
+            chip.textContent = bucket.name;
+            s3List.appendChild(chip);
+        });
+        if (s3Counter) s3Counter.textContent = globals.s3.length;
     }
-    if (ecrCounter && ecrChips) {
-        ecrCounter.innerHTML = '';
-        ecrChips.innerHTML = '';
-        createCounter('ecr-counter', 'ecr-chips', 'ECR Repository', false, appData.global?.ecr || []);
+
+    // Render ECR
+    const ecrList = document.getElementById('ecr-available-list');
+    const ecrCounter = document.getElementById('ecr-count-value');
+    if (ecrList && globals.ecr) {
+        ecrList.innerHTML = '';
+        globals.ecr.forEach(repo => {
+            const chip = document.createElement('div');
+            chip.className = 'action-chip';
+            chip.textContent = repo.name;
+            ecrList.appendChild(chip);
+        });
+        if (ecrCounter) ecrCounter.textContent = globals.ecr.length;
     }
 }
 
-function renderDeployMethods() {
-    const container = document.getElementById('deploy-methods-container');
-    if (!container || !appData.deploy) return;
+function renderDeployMethods(methods) {
+    const container = document.querySelector('.deploy-options');
+    if (!container || !methods) return;
 
-    container.innerHTML = '';
-    appData.deploy.options.forEach(opt => {
-        const isActive = opt.id === appData.deploy.active;
-        const div = document.createElement('div');
-        div.id = `deploy-${opt.id}`;
-        div.className = `deploy-option ${isActive ? 'active' : ''}`;
-        div.onclick = () => selectDeployMethod(opt.id);
+    container.innerHTML = ''; // Clear existing hardcoded cards
 
-        div.innerHTML = `
-            <div class="option-icon">${opt.id === 'classic' ? '🌐' : '☸️'}</div>
+    methods.forEach(method => {
+        const methodCard = document.createElement('div');
+        methodCard.className = `deploy-option glass-card-hover ${method.active ? 'active' : ''}`;
+        methodCard.id = `deploy-${method.id}`;
+        methodCard.onclick = () => selectDeployMethod(method.id);
+
+        methodCard.innerHTML = `
+            <div class="option-icon">${method.id === 'classic' ? '🏗️' : '☸️'}</div>
             <div class="option-content">
-                <div class="option-title">${opt.title}</div>
-                <div class="option-desc">${opt.description}</div>
+                <h3 class="option-title">${method.title}</h3>
+                <p class="option-desc">${method.description}</p>
             </div>
+            <div class="selection-indicator"></div>
         `;
-        container.appendChild(div);
+        container.appendChild(methodCard);
     });
 }
 
@@ -766,47 +788,49 @@ document.addEventListener('DOMContentLoaded', () => {
         plusBtn.className = 'counter-btn';
         plusBtn.textContent = '+';
 
-        // Helper to create input element
-        const createInput = (index, value = '') => {
+        const createInput = (index) => {
             if (isS3) {
-                // Complex row for S3 with random suffix
+                // Create three-section row for S3
                 const rowContainer = document.createElement('div');
                 rowContainer.className = 's3-input-row';
-                rowContainer.style.display = 'flex';
-                rowContainer.style.alignItems = 'center';
-                rowContainer.style.gap = '0.5rem';
-                rowContainer.style.marginBottom = '0.5rem';
+                rowContainer.style.marginTop = '0.5rem';
 
+                // Section 1: Text input (40%)
                 const inputSection = document.createElement('div');
-                inputSection.style.flex = '1';
+                inputSection.className = 's3-section s3-input-section';
+
                 const input = document.createElement('input');
                 input.type = 'text';
-                input.className = 'glass-input global-resource-input';
-                input.placeholder = `Bucket Prefix ${index + 1}`;
-                input.value = value.split('-')[0] || ''; // Try to extract prefix
+                input.className = 'glass-input';
+                input.placeholder = `${resourceType} ${index + 1}`;
+                input.style.width = '100%';
+
                 inputSection.appendChild(input);
 
-                const plusOperator = document.createElement('span');
+                // Operator '+' 
+                const plusOperator = document.createElement('div');
+                plusOperator.className = 's3-operator';
                 plusOperator.textContent = '+';
-                plusOperator.style.opacity = '0.5';
 
+                // Section 2: Random string (20%)
+                const randomString = generateRandomString();
                 const randomSection = document.createElement('div');
-                randomSection.className = 's3-random-suffix';
-                // Try to get existing random or generate new
-                const randomPart = value.includes('-') ? value.split('-').pop() : generateRandomString();
-                randomSection.textContent = randomPart;
+                randomSection.className = 's3-section s3-random-section';
+                randomSection.textContent = randomString;
 
-                const equalsOperator = document.createElement('span');
+                // Operator '='
+                const equalsOperator = document.createElement('div');
+                equalsOperator.className = 's3-operator';
                 equalsOperator.textContent = '=';
-                equalsOperator.style.opacity = '0.5';
 
+                // Section 3: Concatenated result (40%)
                 const resultSection = document.createElement('div');
-                resultSection.className = 's3-result-section';
-                resultSection.textContent = value || (input.value ? input.value + '-' + randomPart : `Unnamed-${randomPart}`);
+                resultSection.className = 's3-section s3-result-section';
+                resultSection.textContent = '-' + randomString; // Initial value with hyphen
 
                 // Update result when input changes and refresh available list
                 input.addEventListener('input', () => {
-                    resultSection.textContent = input.value ? input.value + '-' + randomPart : `Unnamed-${randomPart}`;
+                    resultSection.textContent = input.value + '-' + randomString;
                     updateAvailableList();
                     renderManifestTree();
                 });
@@ -824,7 +848,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 input.type = 'text';
                 input.className = 'glass-input global-resource-input';
                 input.placeholder = `${resourceType} ${index + 1}`;
-                input.value = value;
                 input.style.marginTop = '0.5rem';
                 input.style.width = '100%';
 
@@ -839,21 +862,13 @@ document.addEventListener('DOMContentLoaded', () => {
         };
 
         const updateInputs = () => {
-            // Add inputs for initial data if any, only if inputs array is empty
-            if (initialData.length > 0 && inputs.length === 0) {
-                initialData.forEach((val, idx) => {
-                    const input = createInput(idx, val);
-                    inputs.push(input);
-                    chipsContainer.appendChild(input);
-                });
-            }
-
-            // Sync inputs with count
+            // Add inputs if count increased
             while (inputs.length < count) {
                 const newInput = createInput(inputs.length);
                 inputs.push(newInput);
                 chipsContainer.appendChild(newInput);
             }
+            // Remove inputs if count decreased
             while (inputs.length > count) {
                 const removedInput = inputs.pop();
                 chipsContainer.removeChild(removedInput);
@@ -934,17 +949,23 @@ document.addEventListener('DOMContentLoaded', () => {
         counterContainer.appendChild(widget);
     };
 
-    // Global counters will be initialized via initGlobalCounters() called after JSON load.
+    createCounter('s3-counter', 's3-chips', 'S3 Bucket', true); // isS3 = true
+    createCounter('ecr-counter', 'ecr-chips', 'ECR Repository', false);
 
     // Repositories Section Logic
+    const availableRepos = [
+        { name: 'frontend-app', resources: 'Docker, SSL, Runner' },
+        { name: 'api-service', resources: 'Docker, Runner' },
+        { name: 'worker-node', resources: 'Docker' }
+    ];
+
     function renderAvailableRepos() {
         const container = document.getElementById('available-repos-list');
         if (!container) return;
 
         container.innerHTML = '';
 
-        const repos = appData.repositories || [];
-        if (repos.length === 0) {
+        if (availableRepos.length === 0) {
             const placeholder = document.createElement('div');
             placeholder.className = 'active-green-container placeholder-row';
             placeholder.style.marginTop = '0';
@@ -953,7 +974,7 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        repos.forEach(repo => {
+        availableRepos.forEach(repo => {
             const row = document.createElement('div');
             row.className = 'active-green-container';
             row.style.marginTop = '0';
@@ -978,14 +999,37 @@ document.addEventListener('DOMContentLoaded', () => {
 
     renderAvailableRepos();
 
+    // Instances Section Logic
+    const availableInstances = [
+        {
+            name: 'Web-Server-01',
+            repos: 'frontend-app',
+            configGroups: [
+                { label: 'Instance', values: ['t3.medium'] },
+                { label: 'Storage', values: ['8GB gp3'] },
+                { label: 'Network', values: ['Public IP'] },
+                { label: 'Features', values: ['Docker', 'SSL'] }
+            ]
+        },
+        {
+            name: 'App-Worker-A',
+            repos: 'api-service, worker-node',
+            configGroups: [
+                { label: 'Instance', values: ['t3.large'] },
+                { label: 'Storage', values: ['30GB gp3'] },
+                { label: 'Network', values: ['Private IP'] },
+                { label: 'Features', values: ['Runner', 'Docker'] }
+            ]
+        }
+    ];
+
     function renderInstances() {
         const container = document.getElementById('instances-list-container');
         if (!container) return;
 
         container.innerHTML = '';
 
-        const instances = appData.instances || [];
-        if (instances.length === 0) {
+        if (availableInstances.length === 0) {
             const placeholder = document.createElement('div');
             placeholder.className = 'active-green-container placeholder-row';
             placeholder.style.marginTop = '0';
@@ -994,7 +1038,7 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        instances.forEach(instance => {
+        availableInstances.forEach(instance => {
             const row = document.createElement('div');
             row.className = 'active-green-container';
             row.style.marginTop = '0';
@@ -1090,21 +1134,16 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 function selectDeployMethod(method) {
-    if (!appData.deploy) return;
-
-    // Update active state in data
-    appData.deploy.active = method;
-
-    // Update UI classes
+    // Remove active class from all deploy options
     const options = document.querySelectorAll('.deploy-option');
-    options.forEach(opt => {
-        const optId = opt.id.replace('deploy-', '');
-        if (optId === method) {
-            opt.classList.add('active');
-        } else {
-            opt.classList.remove('active');
-        }
-    });
+    options.forEach(opt => opt.classList.remove('active'));
+
+    // Add active class to the clicked method
+    const selectedId = method === 'classic' ? 'deploy-classic' : 'deploy-kubernetes';
+    const selectedElement = document.getElementById(selectedId);
+    if (selectedElement) {
+        selectedElement.classList.add('active');
+    }
 
     console.log(`Switched deploy method to: ${method}`);
     renderManifestTree();

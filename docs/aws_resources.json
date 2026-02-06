@@ -1,5 +1,5 @@
 {
-  "compute": [
+  "resources": [
     {
       "name": "VPC-Production",
       "subnets": [
@@ -8,11 +8,13 @@
           "ec2s": [
             {
               "name": "Web-Server-01",
-              "type": "t3.medium"
+              "type": "t3.medium",
+              "state": "running"
             },
             {
               "name": "Web-Server-02",
-              "type": "t3.medium"
+              "type": "t3.medium",
+              "state": "running"
             }
           ]
         },
@@ -21,7 +23,18 @@
           "ec2s": [
             {
               "name": "App-Worker-Core",
-              "type": "t3.large"
+              "type": "m5.large",
+              "state": "running"
+            }
+          ]
+        },
+        {
+          "name": "Prod-DB-Subnet",
+          "ec2s": [
+            {
+              "name": "DB-Primary",
+              "type": "r5.large",
+              "state": "running"
             }
           ]
         }
@@ -35,11 +48,13 @@
           "ec2s": [
             {
               "name": "Bastion-Host",
-              "type": "t3.micro"
+              "type": "t3.small",
+              "state": "running"
             },
             {
               "name": "Monitoring-Node",
-              "type": "t3.small"
+              "type": "t3.medium",
+              "state": "running"
             }
           ]
         }
@@ -53,114 +68,37 @@
           "ec2s": [
             {
               "name": "Staging-Web-1",
-              "type": "t3.medium"
+              "type": "t3.micro",
+              "state": "stopped"
             }
           ]
         }
       ]
     }
   ],
-  "global": {
+  "global_resources": {
     "s3": [
-      "static-assets-prd",
-      "user-uploads-bucket"
+      { "name": "prod-logs-bucket", "region": "us-east-1" },
+      { "name": "app-assets-v2", "region": "us-east-1" },
+      { "name": "backup-daily-sql", "region": "us-west-2" }
     ],
     "ecr": [
-      "frontend-base",
-      "api-core-service"
+      { "name": "backend-api:latest", "uri": "123456789012.dkr.ecr.us-east-1.amazonaws.com/backend-api" },
+      { "name": "frontend-ui:v2.1", "uri": "123456789012.dkr.ecr.us-east-1.amazonaws.com/frontend-ui" }
     ]
   },
-  "deploy": {
-    "options": [
-      {
-        "id": "classic",
-        "title": "Classic (NGINX)",
-        "description": "Direct edge deployment via NGINX reverse proxy"
-      },
-      {
-        "id": "kubernetes",
-        "title": "Kubernetes (KIND)",
-        "description": "Local Kubernetes orchestration using KIND"
-      }
-    ],
-    "active": "classic"
-  },
-  "repositories": [
+  "deploy_methods": [
     {
-      "name": "frontend-app",
-      "resources": "Docker, SSL, Runner"
+      "id": "classic",
+      "title": "Classic Provisioning",
+      "description": "Deploy using standard EC2 instances and Auto Scaling Groups.",
+      "active": true
     },
     {
-      "name": "api-service",
-      "resources": "Docker, Runner"
-    },
-    {
-      "name": "worker-node",
-      "resources": "Docker"
-    }
-  ],
-  "instances": [
-    {
-      "name": "Web-Server-01",
-      "repos": "frontend-app",
-      "configGroups": [
-        {
-          "label": "Instance",
-          "values": [
-            "t3.medium"
-          ]
-        },
-        {
-          "label": "Storage",
-          "values": [
-            "8GB gp3"
-          ]
-        },
-        {
-          "label": "Network",
-          "values": [
-            "Public IP"
-          ]
-        },
-        {
-          "label": "Features",
-          "values": [
-            "Docker",
-            "SSL"
-          ]
-        }
-      ]
-    },
-    {
-      "name": "App-Worker-A",
-      "repos": "api-service, worker-node",
-      "configGroups": [
-        {
-          "label": "Instance",
-          "values": [
-            "t3.large"
-          ]
-        },
-        {
-          "label": "Storage",
-          "values": [
-            "30GB gp3"
-          ]
-        },
-        {
-          "label": "Network",
-          "values": [
-            "Private IP"
-          ]
-        },
-        {
-          "label": "Features",
-          "values": [
-            "Runner",
-            "Docker"
-          ]
-        }
-      ]
+      "id": "kubernetes",
+      "title": "Kubernetes Cluster",
+      "description": "Orchestrate containers with a managed EKS control plane.",
+      "active": false
     }
   ]
 }
